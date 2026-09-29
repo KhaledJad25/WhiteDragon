@@ -1,0 +1,14 @@
+{
+    "name": "WD.UI",
+    "rootNamespace": "",
+    "references": ["WD.Core", "WD.Combat", "WD.Player", "WD.Items", "WD.Enemies", "WD.Generation"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
