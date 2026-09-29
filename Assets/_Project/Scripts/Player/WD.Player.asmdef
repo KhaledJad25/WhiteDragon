@@ -1,7 +1,11 @@
 {
     "name": "WD.Player",
     "rootNamespace": "",
-    "references": ["WD.Core", "Unity.InputSystem"],
+    "references": [
+        "WD.Core",
+        "Unity.InputSystem",
+        "WD.Combat"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
