@@ -4,6 +4,12 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/_Project/Scenes/Bootstrap.unity
+    guid: 97243a81f7da34c4c9e3d0bf4251f427
+  - enabled: 1
+    path: Assets/_Project/Scenes/TestRoom.unity
+    guid: 4e80ec26385c28041b5779b5f9b37407
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
