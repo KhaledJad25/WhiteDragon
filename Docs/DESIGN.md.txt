@@ -1,0 +1,82 @@
+# WhiteDragon: Design Doc (locked v1)
+
+Give this file to AI tools at the start of every session.
+
+## Vision
+First-person dark-fantasy roguelite. Inspired by the design philosophy of The Binding of Isaac
+(simple stats, huge item synergy, room-locked loop, replayable runs), in a different setting
+and camera. Tone: gritty, Berserk / Darkest Dungeon / Dark Souls / Elden Ring, toned down
+(Crimson Moon style) so assets are cheap to make and load fast.
+We use our own names and mechanics. Isaac is a compass, not a template.
+
+## Setting and story
+- Start: escaping the tower (or having just escaped).
+- Goal: return, defeat the one who jailed you, then face deeper dark entities unlocked by play.
+- Two paths: Corruption (succumb to dark arts, Femto-style) vs Fellowship (rally allies, Band of the Hawk style).
+- Endings = final boss + alignment tier + story flags.
+
+## Tech
+- Unity 6000.6.3f1, URP, new Input System, keyboard and mouse only (gamepad later).
+- Git + LFS on GitHub. Project lives at C:\Dev\WhiteDragon (outside OneDrive).
+- Assembly definitions per scripts folder, prefixed WD. (WD.Core, WD.Combat, WD.Player, WD.Items,
+  WD.Enemies, WD.Generation, WD.UI, WD.Debugging, WD.Tests.EditMode).
+- Folder root: Assets/_Project/ (Scripts, Data, Prefabs, Scenes, Art, Audio, Tests).
+- Data-driven: ScriptableObjects for items, characters, projectiles, floor seeds, roll tables, unlocks.
+- Do not install com.unity.pipeline (experimental, caused compile errors in this editor version).
+
+## Core loop
+Enter room, doors seal, clear enemies, reward, move on. Floor boss, descend, repeat. Runs are seeded.
+
+## Combat
+- Throw rocks (first character). Unlimited. Aimed from camera center, with arc and range.
+- No wind-up, recovery, stamina, or lockout. Only a fire-rate interval.
+- Items visibly and mechanically change the shot.
+
+## Stats (v1)
+MoveSpeed, JumpHeight, CharacterSize, FireRate, Damage, ProjectileSpeed, Range, Luck.
+Stat = (base + flat) x (1 + summed percent) x multipliers. Adding a stat = one enum line.
+CharacterSize changes collider, eye height, hitbox, projectile spawn point (clamped 0.5 to 2.0).
+The transform is never scaled; size is applied to collider and camera height.
+
+## Health (Isaac-style hearts, half-heart units)
+- Red containers: main health.
+- Soul hearts (Fellowship): temporary overlay.
+- Dark hearts (Corruption): overlay that bursts on break.
+- Overlay absorbs damage first, then red. Short i-frames after a hit.
+
+## Items
+An item = stat modifiers + shot recipe edits + event hooks + tags.
+- Shot recipe: projectile type, damage type, behavior list, on-hit effects, tags.
+- Behaviors: pierce, homing, bounce, split, orbit, explode, return, trail.
+- Event bus: OnThrow, OnShotBuilt, OnHit, OnCrit, OnKill, OnDamageTaken, OnRoomEnter,
+  OnRoomClear, OnPickup, OnOverlayBroke.
+- Tag synergies (3+ fire items, etc.) plus special-case combos.
+- Safeguards: trigger depth limit, stat caps, deterministic resolve order, combo log in debug.
+- Actives, consumables, pools per room type: added after the backbone is stable.
+
+## Level design
+- Floors are authored Floor Seeds (fixed layouts, several per floor) with random rolls in slots:
+  encounters, rewards, boss, hazards, events, paths, atmosphere (Elden Ring Nightreign style).
+- Seed selection: story override if a beat is active, else weighted random from UNLOCKED seeds.
+- Story beats may pin specific slots. Everything else rolls.
+- Roll tables are weighted and influenced by Luck and Alignment. Each slot has a difficulty budget.
+- One run seed, separate random streams per category, all rolls logged in debug.
+
+## Unlocks
+Items, characters, floor seeds, bosses, floors, and endings each carry an optional unlock ID.
+Conditions are data built from event bus events. Pools skip locked content.
+Story flags and unlock IDs are stored separately in save data.
+
+## Roadmap
+- Sprint 0: project setup, git, core stats, health, tests. DONE.
+- Sprint 1: first-person controller, size applier, test room, rock throw, hit feedback.
+  Exit test: five minutes of throwing at dummies is fun with zero items.
+- Sprint 2: item backbone (shot recipe, event bus, item ScriptableObjects, heart HUD), unlock registry stub.
+- Phase 3: floor seed loader, roll tables, story override hook, first hand-built seed.
+- Later: enemies and bosses, alignment system, meta-progression, content scale-up, polish.
+
+## Rules
+- Grey-box only until the rock throw feels good.
+- Never add content to a system that is not stable.
+- Commit after every working step. Commit before letting any tool make large changes.
+- Ship around 100 great items before scaling toward hundreds.
