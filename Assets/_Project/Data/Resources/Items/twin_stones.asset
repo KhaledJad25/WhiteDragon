@@ -25,5 +25,12 @@ MonoBehaviour:
   spreadAddDegrees: 8
   pierceAdd: 0
   shotSizeMultiplier: 1
+  homingAdd: 0
+  burnDpsAdd: 0
+  burnDurationAdd: 0
   overrideDamageType: 0
   damageType: 0
+  rarity: 2
+  pools: 01000000i
+  weightMultiplier: 1
+  requiredUnlockId: 

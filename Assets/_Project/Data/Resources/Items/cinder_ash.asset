@@ -27,3 +27,7 @@ MonoBehaviour:
   burnDurationAdd: 3
   overrideDamageType: 0
   damageType: 0
+  rarity: 1
+  pools: 0000000001000000i
+  weightMultiplier: 1
+  requiredUnlockId: 
