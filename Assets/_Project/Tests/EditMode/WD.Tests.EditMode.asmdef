@@ -1,7 +1,7 @@
 {
     "name": "WD.Tests.EditMode",
     "rootNamespace": "",
-    "references": ["UnityEngine.TestRunner", "UnityEditor.TestRunner", "WD.Core", "WD.Combat"],
+    "references": ["UnityEngine.TestRunner", "UnityEditor.TestRunner", "WD.Core", "WD.Combat", "WD.Items"],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

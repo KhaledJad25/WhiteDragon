@@ -4,7 +4,8 @@
     "references": [
         "WD.Core",
         "Unity.InputSystem",
-        "WD.Combat"
+        "WD.Combat",
+        "WD.Items"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

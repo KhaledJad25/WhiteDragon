@@ -7,6 +7,11 @@ public class FloatingText : MonoBehaviour
 
     public static void Spawn(Vector3 position, string text)
     {
+        Spawn(position, text, Color.white);
+    }
+
+    public static void Spawn(Vector3 position, string text, Color color)
+    {
         GameObject go = new GameObject("DamageNumber");
         go.transform.position = position;
 
@@ -16,7 +21,7 @@ public class FloatingText : MonoBehaviour
         tm.fontSize = 48;
         tm.characterSize = 0.05f;
         tm.anchor = TextAnchor.MiddleCenter;
-        tm.color = Color.white;
+        tm.color = color;
 
         MeshRenderer mr = go.GetComponent<MeshRenderer>();
         mr.material = tm.font.material;

@@ -12,12 +12,14 @@ public class PlayerThrower : MonoBehaviour
     [SerializeField] float aimMaxDistance = 100f;
 
     PlayerStats stats;
+    PlayerInventory inventory;
     InputAction fire;
     float nextThrowTime;
 
     void Awake()
     {
         stats = GetComponent<PlayerStats>();
+        inventory = GetComponent<PlayerInventory>();
         fire = new InputAction("Fire", InputActionType.Button, "<Mouse>/leftButton");
     }
 
@@ -59,15 +61,29 @@ public class PlayerThrower : MonoBehaviour
         }
 
         Vector3 spawnPos = ct.position + ct.forward * spawnForward + ct.right * spawnRight - ct.up * spawnDown;
-        Vector3 direction = (aimPoint - spawnPos).normalized;
+        Vector3 baseDir = (aimPoint - spawnPos).normalized;
 
-        Projectile rock = Instantiate(rockPrefab, spawnPos, Quaternion.identity);
-        rock.Init(
-            direction,
-            stats.Stats.Get(StatType.Damage),
-            stats.Stats.Get(StatType.ProjectileSpeed),
-            stats.Stats.Get(StatType.Range),
-            transform);
+        ShotRecipe recipe = ShotRecipe.FromStats(stats.Stats);
+        if (inventory != null)
+        {
+            inventory.ModifyRecipe(recipe);
+        }
+        recipe.ClampToCaps();
+        GameEvents.RaiseShotBuilt(recipe);
+
+        int n = recipe.Count;
+        for (int i = 0; i < n; i++)
+        {
+            float offset = 0f;
+            if (n > 1)
+            {
+                offset = Mathf.Lerp(-recipe.SpreadDegrees * 0.5f, recipe.SpreadDegrees * 0.5f, i / (float)(n - 1));
+            }
+
+            Vector3 dir = Quaternion.AngleAxis(offset, ct.up) * baseDir;
+            Projectile rock = Instantiate(rockPrefab, spawnPos, Quaternion.identity);
+            rock.Init(dir, recipe, transform);
+        }
 
         GameFeel.Throw();
     }
