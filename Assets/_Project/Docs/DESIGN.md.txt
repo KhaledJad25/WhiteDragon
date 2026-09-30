@@ -74,11 +74,13 @@ Built and working:
 - Shot pipeline: ShotRecipe is built from stats every throw, edited by items, clamped by ClampToCaps.
 - Items: ItemDefinition assets in Data/Resources/Items (16). SynergyDefinition assets in Data/Resources/Synergies (6).
   ItemLoadout holds the logic (plain C#, unit tested). PlayerInventory is the MonoBehaviour wrapper.
-- Debug: DebugPanel (F1) to add and remove items and view the last recipe.
+- Debug: DebugPanel (F1) to add and remove items, view the last recipe, and test health/damage actions.
 - Tests: 14 EditMode tests. All must pass before committing.
-- HealthState (hearts) exists in Combat but is NOT yet attached to the player.
+- Health: PlayerHealth attached to Player (wraps HealthState, IDamageable, i-frames, Dark heart explosion on break, death state).
+- HUD: HeartHUD renders Isaac-style procedural pixel-art hearts (Red, Soul, Dark) with pulse and damage vignette.
+- Combat Hazard: DamageHazard trigger in TestRoom for physics-based damage testing.
 
-Not built yet: player health HUD and damage, real enemies, item pedestals, room reward flow,
+Not built yet: real enemies, item pedestals, room reward flow,
 floor seeds, alignment, unlocks, save data.
 
 Conventions:

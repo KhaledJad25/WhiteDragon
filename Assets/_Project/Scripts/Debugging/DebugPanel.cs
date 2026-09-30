@@ -5,6 +5,7 @@ public class DebugPanel : MonoBehaviour
 {
     PlayerStats stats;
     PlayerInventory inventory;
+    PlayerHealth health;
     ItemDefinition[] catalog;
     bool open;
     Vector2 scroll;
@@ -30,6 +31,7 @@ public class DebugPanel : MonoBehaviour
     {
         stats = FindAnyObjectByType<PlayerStats>();
         inventory = FindAnyObjectByType<PlayerInventory>();
+        health = FindAnyObjectByType<PlayerHealth>();
         catalog = Resources.LoadAll<ItemDefinition>("Items");
         System.Array.Sort(catalog, (a, b) => string.Compare(a.displayName, b.displayName));
     }
@@ -79,6 +81,39 @@ public class DebugPanel : MonoBehaviour
 
         GUILayout.BeginArea(new Rect(10, 10, 480, Screen.height - 20), GUI.skin.box);
         GUILayout.Label("DEBUG (F1 to close)");
+
+        if (health != null && health.Health != null)
+        {
+            GUILayout.Label("--- Health ---");
+            int soulCount = 0;
+            int darkCount = 0;
+            for (int i = 0; i < health.Health.Overlay.Count; i++)
+            {
+                if (health.Health.Overlay[i] == HeartType.Soul) soulCount++;
+                else if (health.Health.Overlay[i] == HeartType.Dark) darkCount++;
+            }
+
+            string status = health.IsDead ? "[DEAD]" : (health.IsInvulnerable ? "[INVULNERABLE]" : "[ALIVE]");
+            GUILayout.Label($"Red: {health.Health.RedCurrent}/{health.Health.RedContainers} half-hearts ({(health.Health.RedCurrent / 2f):0.#}/{(health.Health.RedContainers / 2f):0.#} full)  |  Soul: {soulCount}  Dark: {darkCount}  {status}");
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Dmg 1/2")) health.TakeDamage(1, health.transform.position);
+            if (GUILayout.Button("Dmg 1 Full")) health.TakeDamage(2, health.transform.position);
+            if (GUILayout.Button("Heal 1/2")) health.Heal(1);
+            if (GUILayout.Button("Heal 1 Full")) health.Heal(2);
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("+1 Container")) health.AddContainers(2);
+            if (GUILayout.Button("+1 Soul")) health.AddOverlay(HeartType.Soul, 1);
+            if (GUILayout.Button("+1 Dark")) health.AddOverlay(HeartType.Dark, 1);
+            if (GUILayout.Button(health.IsDead ? "Revive" : "Kill"))
+            {
+                if (health.IsDead) health.Revive();
+                else health.TakeDamage(999, health.transform.position);
+            }
+            GUILayout.EndHorizontal();
+        }
 
         GUILayout.Label("--- Stats ---");
         foreach (StatType t in System.Enum.GetValues(typeof(StatType)))
