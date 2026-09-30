@@ -31,6 +31,12 @@ public class ItemDefinition : ScriptableObject
     public bool overrideDamageType;
     public DamageType damageType;
 
+    [Header("Pools and Rarity")]
+    public ItemRarity rarity = ItemRarity.Common;
+    public ItemPoolType[] pools = new[] { ItemPoolType.Normal };
+    public float weightMultiplier = 1f;
+    public string requiredUnlockId = "";
+
     public void EditRecipe(ShotRecipe r)
     {
         r.Count += projectileCountAdd;
