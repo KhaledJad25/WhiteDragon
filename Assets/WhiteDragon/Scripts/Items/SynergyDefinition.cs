@@ -17,5 +17,12 @@ namespace WhiteDragon
         public StatModifier[] statModifiers = new StatModifier[0];
         public RecipeEdits recipeEdits = RecipeEdits.Default;
         public List<ShotEffect> effects = new List<ShotEffect>();
+
+        /// <summary>One line describing when it activates and what it does, for tools and debugging.</summary>
+        public string Summary()
+        {
+            string text = ItemDefinition.DescribeEffects(statModifiers, recipeEdits, effects);
+            return $"{requiredCount}x '{tag}': " + (text.Length > 0 ? text : "no effect");
+        }
     }
 }

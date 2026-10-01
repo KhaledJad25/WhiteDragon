@@ -26,6 +26,36 @@ namespace WhiteDragon
         [Tooltip("Empty means always available.")]
         public string requiredUnlockId = "";
 
+        /// <summary>One line describing what the item does, for tools and debugging.</summary>
+        public string Summary()
+        {
+            string text = DescribeEffects(statModifiers, recipeEdits, effects);
+            if (!string.IsNullOrEmpty(requiredUnlockId))
+                text += (text.Length > 0 ? ", " : "") + $"needs unlock '{requiredUnlockId}'";
+            return text.Length > 0 ? text : "no effect";
+        }
+
+        internal static string DescribeEffects(StatModifier[] mods, RecipeEdits edits, List<ShotEffect> shotEffects)
+        {
+            var parts = new List<string>();
+            if (mods != null)
+                foreach (var m in mods)
+                    parts.Add(m.kind == ModifierKind.Flat ? $"{Signed(m.value)} {m.stat}"
+                        : m.kind == ModifierKind.PercentAdd ? $"{Signed(m.value * 100f)}% {m.stat}"
+                        : $"x{Num(m.value)} {m.stat}");
+            if (edits.projectileCountAdd != 0) parts.Add($"{Signed(edits.projectileCountAdd)} rocks");
+            if (edits.spreadAddDegrees != 0f) parts.Add($"{Signed(edits.spreadAddDegrees)}° spread");
+            if (edits.pierceAdd != 0) parts.Add($"{Signed(edits.pierceAdd)} pierce");
+            if (!Mathf.Approximately(edits.sizeMultiplier, 1f)) parts.Add($"x{Num(edits.sizeMultiplier)} size");
+            if (edits.overrideDamageType) parts.Add($"{edits.damageType} damage");
+            if (shotEffects != null)
+                foreach (var e in shotEffects) parts.Add(e != null ? e.name : "(missing effect)");
+            return string.Join(", ", parts);
+        }
+
+        static string Signed(float v) => (v >= 0f ? "+" : "") + Num(v);
+        static string Num(float v) => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+
         public bool HasTag(string tag) => Contains(tags, tag);
         public bool InPool(string poolId) => Contains(poolIds, poolId);
 
