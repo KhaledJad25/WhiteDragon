@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -12,12 +13,21 @@ public class DebugPanel : MonoBehaviour
     int hits;
     int kills;
     string lastShot = "";
+    string seedInput = "";
+
+    readonly List<ItemPedestal> cachedPedestals = new List<ItemPedestal>();
+    readonly List<string> cachedPedestalLines = new List<string>();
+    readonly List<string> cachedPoolCountLines = new List<string>();
+    string cachedSeedString = "";
+    GUIStyle seedStyle;
 
     void OnEnable()
     {
         GameEvents.ShotBuilt += OnShot;
         GameEvents.EnemyHit += OnHit;
         GameEvents.EnemyKilled += OnKill;
+        RunSession.RunStarted += OnRunStarted;
+        RunSession.ItemPicked += OnItemPicked;
     }
 
     void OnDisable()
@@ -25,6 +35,8 @@ public class DebugPanel : MonoBehaviour
         GameEvents.ShotBuilt -= OnShot;
         GameEvents.EnemyHit -= OnHit;
         GameEvents.EnemyKilled -= OnKill;
+        RunSession.RunStarted -= OnRunStarted;
+        RunSession.ItemPicked -= OnItemPicked;
     }
 
     void Start()
@@ -34,6 +46,74 @@ public class DebugPanel : MonoBehaviour
         health = FindAnyObjectByType<PlayerHealth>();
         catalog = Resources.LoadAll<ItemDefinition>("Items");
         System.Array.Sort(catalog, (a, b) => string.Compare(a.displayName, b.displayName));
+
+        cachedSeedString = "Current Seed: " + RunSession.Seed;
+        RebuildPoolCounts();
+        RebuildPedestals();
+    }
+
+    void OnRunStarted(int seed)
+    {
+        cachedSeedString = "Current Seed: " + seed;
+        RebuildPoolCounts();
+        RebuildPedestals();
+    }
+
+    void OnItemPicked(string itemId)
+    {
+        RebuildPedestals();
+    }
+
+    void RebuildPoolCounts()
+    {
+        cachedPoolCountLines.Clear();
+        var allItems = ItemCatalog.AllItems;
+        foreach (ItemPoolType poolType in System.Enum.GetValues(typeof(ItemPoolType)))
+        {
+            int countInPool = 0;
+            if (allItems != null)
+            {
+                for (int i = 0; i < allItems.Count; i++)
+                {
+                    var item = allItems[i];
+                    if (item != null && item.pools != null)
+                    {
+                        for (int p = 0; p < item.pools.Length; p++)
+                        {
+                            if (item.pools[p] == poolType)
+                            {
+                                countInPool++;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            cachedPoolCountLines.Add(poolType + " Pool: " + countInPool + " items");
+        }
+    }
+
+    void RebuildPedestals()
+    {
+        cachedPedestals.Clear();
+        cachedPedestalLines.Clear();
+
+        var activePedestals = FindObjectsByType<ItemPedestal>(FindObjectsInactive.Exclude);
+        if (activePedestals != null && activePedestals.Length > 0)
+        {
+            System.Array.Sort(activePedestals, (a, b) => string.Compare(ItemPedestal.GetHierarchyPathKey(a.transform), ItemPedestal.GetHierarchyPathKey(b.transform), System.StringComparison.Ordinal));
+            for (int i = 0; i < activePedestals.Length; i++)
+            {
+                var ped = activePedestals[i];
+                if (ped == null) continue;
+
+                cachedPedestals.Add(ped);
+                string pathKey = ItemPedestal.GetHierarchyPathKey(ped.transform);
+                string groupStr = string.IsNullOrEmpty(ped.GroupId) ? "standalone" : "group '" + ped.GroupId + "'";
+                string itemStr = ped.IsEmpty ? "empty" : (ped.CurrentItem != null ? ped.CurrentItem.displayName : "empty");
+                cachedPedestalLines.Add("[" + ped.Pool + "] " + pathKey + " (" + groupStr + ") -> " + itemStr);
+            }
+        }
     }
 
     void OnShot(ShotRecipe r)
@@ -62,6 +142,12 @@ public class DebugPanel : MonoBehaviour
             open = !open;
             Cursor.lockState = open ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = open;
+            if (open)
+            {
+                cachedSeedString = "Current Seed: " + RunSession.Seed;
+                RebuildPoolCounts();
+                RebuildPedestals();
+            }
         }
     }
 
@@ -81,6 +167,73 @@ public class DebugPanel : MonoBehaviour
 
         GUILayout.BeginArea(new Rect(10, 10, 480, Screen.height - 20), GUI.skin.box);
         GUILayout.Label("DEBUG (F1 to close)");
+
+        GUILayout.Label("--- Run & Seed ---");
+        if (seedStyle == null)
+        {
+            seedStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 15,
+                fontStyle = FontStyle.Bold
+            };
+        }
+        GUILayout.Label(cachedSeedString, seedStyle);
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("New run seed"))
+        {
+            RunSession.StartRun(0);
+        }
+        seedInput = GUILayout.TextField(seedInput, GUILayout.Width(110));
+        if (GUILayout.Button("Start run with seed"))
+        {
+            if (int.TryParse(seedInput.Trim(), out int parsedSeed))
+            {
+                RunSession.StartRun(parsedSeed);
+            }
+        }
+        GUILayout.EndHorizontal();
+
+        GUILayout.Label("--- Item Pools ---");
+        for (int i = 0; i < cachedPoolCountLines.Count; i++)
+        {
+            GUILayout.Label(cachedPoolCountLines[i]);
+        }
+
+        GUILayout.BeginHorizontal();
+        GUILayout.Label("--- Pedestals in Scene ---");
+        if (GUILayout.Button("Refresh", GUILayout.Width(70)))
+        {
+            RebuildPedestals();
+        }
+        GUILayout.EndHorizontal();
+
+        // Check if any cached pedestal was destroyed
+        bool hasDestroyed = false;
+        for (int i = 0; i < cachedPedestals.Count; i++)
+        {
+            if (cachedPedestals[i] == null)
+            {
+                hasDestroyed = true;
+                break;
+            }
+        }
+        if (hasDestroyed)
+        {
+            RebuildPedestals();
+        }
+
+        if (cachedPedestalLines.Count == 0)
+        {
+            GUILayout.Label("(none)");
+        }
+        else
+        {
+            for (int i = 0; i < cachedPedestalLines.Count; i++)
+            {
+                GUILayout.Label(cachedPedestalLines[i]);
+            }
+        }
 
         if (health != null && health.Health != null)
         {
