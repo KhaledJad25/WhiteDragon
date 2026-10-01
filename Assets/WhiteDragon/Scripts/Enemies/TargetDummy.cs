@@ -12,10 +12,10 @@ namespace WhiteDragon
         public float flashTime = 0.1f;
 
         float health;
-        float flashTimer;
         bool dead;
         Renderer[] renderers;
         Collider[] colliders;
+        RendererTint tinter;
 
         public float Health => health;
         public bool IsDead => dead;
@@ -25,21 +25,15 @@ namespace WhiteDragon
             health = maxHealth;
             renderers = GetComponentsInChildren<Renderer>();
             colliders = GetComponentsInChildren<Collider>();
-            SetColor(tint);
-        }
-
-        void Update()
-        {
-            if (flashTimer <= 0f) return;
-            flashTimer -= Time.deltaTime;
-            SetColor(Color.Lerp(tint, flashColor, Mathf.Clamp01(flashTimer / flashTime)));
+            tinter = RendererTint.For(gameObject);
+            tinter.SetBaseColor(tint);
         }
 
         public void TakeDamage(float amount, Vector3 hitPoint)
         {
             if (dead) return;
             health -= amount;
-            flashTimer = flashTime;
+            tinter.Flash(flashColor, flashTime);
             if (health <= 0f) Die();
         }
 
@@ -57,8 +51,7 @@ namespace WhiteDragon
         {
             health = maxHealth;
             dead = false;
-            flashTimer = 0f;
-            SetColor(tint);
+            tinter.StopFlash();
             SetVisible(true);
         }
 
@@ -66,11 +59,6 @@ namespace WhiteDragon
         {
             foreach (var r in renderers) r.enabled = visible;
             foreach (var c in colliders) c.enabled = visible;
-        }
-
-        void SetColor(Color c)
-        {
-            foreach (var r in renderers) r.material.color = c;
         }
     }
 }

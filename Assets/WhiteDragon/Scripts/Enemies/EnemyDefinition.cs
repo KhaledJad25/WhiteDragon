@@ -26,5 +26,9 @@ namespace WhiteDragon
         [Header("Look")]
         [Tooltip("Placeholder body color.")]
         public Color tint = Color.grey;
+
+        [Header("Art (optional)")]
+        [Tooltip("Model spawned on the enemy, replacing the placeholder shapes. Pivot at the feet, facing +Z. Empty = placeholder shapes tinted with Tint.")]
+        public GameObject visualPrefab;
     }
 }

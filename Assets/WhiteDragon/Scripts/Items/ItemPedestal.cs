@@ -24,12 +24,16 @@ namespace WhiteDragon
         ItemDefinition item;
         Transform orb;
         Renderer orbRenderer;
+        GameObject worldModel;
         TextMesh label;
         PlayerInventory player;
         Camera playerCamera;
 
         public ItemDefinition Item => item;
         public string Path => HierarchyPath(transform);
+        /// <summary>The spawned worldPrefab instance, or null when showing the placeholder sphere.</summary>
+        public GameObject WorldModel => worldModel;
+        public Renderer PlaceholderRenderer => orbRenderer;
 
         // ---------- Rolling ----------
 
@@ -77,8 +81,21 @@ namespace WhiteDragon
         {
             item = newItem;
             EnsureVisuals();
+            if (worldModel != null) DestroySafe(worldModel);
+            worldModel = null;
             orb.gameObject.SetActive(item != null);
-            if (item != null) orbRenderer.sharedMaterial = PlaceholderMaterials.Lit(RarityColor(item.rarity));
+            if (item != null && item.worldPrefab != null)
+            {
+                worldModel = Instantiate(item.worldPrefab, orb, false);
+                worldModel.name = item.worldPrefab.name;
+                worldModel.transform.localPosition = Vector3.zero;
+                orbRenderer.gameObject.SetActive(false);
+            }
+            else if (item != null)
+            {
+                orbRenderer.gameObject.SetActive(true);
+                orbRenderer.sharedMaterial = PlaceholderMaterials.Lit(RarityColor(item.rarity));
+            }
             label.text = item == null ? "" : $"{item.displayName}\n{item.description}\nE: take";
             label.gameObject.SetActive(false);
         }
@@ -165,15 +182,18 @@ namespace WhiteDragon
             pillar.transform.localScale = new Vector3(0.8f, 0.5f, 0.8f);
             pillar.GetComponent<Renderer>().sharedMaterial = PlaceholderMaterials.Lit(new Color(0.32f, 0.31f, 0.3f));
 
-            var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            sphere.name = "Item";
-            DestroyCollider(sphere);
-            orb = sphere.transform;
+            // Unscaled pivot that bobs and spins; holds either the placeholder sphere or the item's model.
+            var pivot = new GameObject("Item");
+            orb = pivot.transform;
             orb.SetParent(transform, false);
             orb.localPosition = new Vector3(0f, 1.4f, 0f);
-            orb.localScale = Vector3.one * 0.45f;
+            var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            sphere.name = "Placeholder";
+            DestroyCollider(sphere);
+            sphere.transform.SetParent(orb, false);
+            sphere.transform.localScale = Vector3.one * 0.45f;
             orbRenderer = sphere.GetComponent<Renderer>();
-            sphere.SetActive(false);
+            pivot.SetActive(false);
 
             var labelGo = new GameObject("Label");
             labelGo.transform.SetParent(transform, false);
@@ -190,11 +210,12 @@ namespace WhiteDragon
             labelGo.SetActive(false);
         }
 
-        static void DestroyCollider(GameObject go)
+        static void DestroyCollider(GameObject go) => DestroySafe(go.GetComponent<Collider>());
+
+        static void DestroySafe(UnityEngine.Object o)
         {
-            var c = go.GetComponent<Collider>();
-            if (Application.isPlaying) Destroy(c);
-            else DestroyImmediate(c);
+            if (Application.isPlaying) Destroy(o);
+            else DestroyImmediate(o);
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

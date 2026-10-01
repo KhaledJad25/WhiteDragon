@@ -35,12 +35,9 @@ namespace WhiteDragon
 
         public static Projectile Spawn(ShotRecipe recipe, Vector3 position, Vector3 direction, Transform owner)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            go.name = "Rock";
-            DestroySafe(go.GetComponent<Collider>());
+            var go = new GameObject("Rock");
             go.transform.position = position;
-            go.transform.localScale = Vector3.one * (BaseRadius * 2f * recipe.SizeScale);
-            go.GetComponent<Renderer>().sharedMaterial = PlaceholderMaterials.Lit(DamageTypeColors.Tint(recipe.DamageType));
+            CreateVisual(go.transform, recipe);
 
             var p = go.AddComponent<Projectile>();
             p.recipe = recipe;
@@ -52,6 +49,32 @@ namespace WhiteDragon
             foreach (var e in p.effects)
                 e.Effect.OnSpawn(e);
             return p;
+        }
+
+        /// <summary>Child "Visual": the ProjectileVisuals model for the damage type, or the tinted placeholder sphere.</summary>
+        static void CreateVisual(Transform root, ShotRecipe recipe)
+        {
+            var prefab = ProjectileVisuals.Find(recipe.DamageType);
+            GameObject visual;
+            if (prefab != null)
+            {
+                visual = Instantiate(prefab, root, false);
+                visual.transform.localPosition = Vector3.zero;
+                visual.transform.localScale = prefab.transform.localScale * recipe.SizeScale;
+                foreach (var c in visual.GetComponentsInChildren<Collider>(true)) DestroySafe(c);
+                foreach (var rb in visual.GetComponentsInChildren<Rigidbody>(true)) DestroySafe(rb);
+            }
+            else
+            {
+                visual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                DestroySafe(visual.GetComponent<Collider>());
+                visual.transform.SetParent(root, false);
+                visual.transform.localScale = Vector3.one * (BaseRadius * 2f * recipe.SizeScale);
+                var r = visual.GetComponent<Renderer>();
+                r.sharedMaterial = PlaceholderMaterials.Lit(Color.white);
+                RendererTint.SetColor(r, DamageTypeColors.Tint(recipe.DamageType));
+            }
+            visual.name = "Visual";
         }
 
         void Update() => Tick(Time.deltaTime);

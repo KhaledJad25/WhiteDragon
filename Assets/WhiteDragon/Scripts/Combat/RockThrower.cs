@@ -11,6 +11,8 @@ namespace WhiteDragon
         [Tooltip("Spawn offset from the camera: right, up, forward.")]
         public Vector3 handOffset = new Vector3(0.2f, -0.25f, 0.6f);
         public float aimDistance = 200f;
+        [Tooltip("Optional hand/socket transform where rocks appear (e.g. on a first-person arms model). Empty = Hand Offset from the camera.")]
+        public Transform handSocket;
 
         PlayerStats stats;
         float nextThrowTime;
@@ -46,7 +48,7 @@ namespace WhiteDragon
 
             Transform cam = aimCamera.transform;
             Vector3 aimPoint = FindAimPoint(cam.position, cam.forward);
-            Vector3 spawn = cam.position + cam.right * handOffset.x + cam.up * handOffset.y + cam.forward * handOffset.z;
+            Vector3 spawn = HandPosition();
             Vector3 direction = (aimPoint - spawn).normalized;
 
             for (int i = 0; i < recipe.Count; i++)
@@ -55,6 +57,14 @@ namespace WhiteDragon
                 Projectile.Spawn(recipe, spawn, Quaternion.AngleAxis(yaw, cam.up) * direction, transform);
             }
             GameFeel.OnThrow(spawn);
+        }
+
+        /// <summary>Where rocks appear: the hand socket if assigned, otherwise Hand Offset from the camera.</summary>
+        public Vector3 HandPosition()
+        {
+            if (handSocket != null) return handSocket.position;
+            Transform cam = aimCamera.transform;
+            return cam.position + cam.right * handOffset.x + cam.up * handOffset.y + cam.forward * handOffset.z;
         }
 
         Vector3 FindAimPoint(Vector3 origin, Vector3 forward)

@@ -36,5 +36,9 @@ namespace WhiteDragon
         [Tooltip("Most stacks a target can have. Damage scales with stacks.")]
         [Min(1)]
         public int maxStacks = 1;
+
+        [Header("Art (optional)")]
+        [Tooltip("Effect (e.g. flames, drips) attached to the target while the status lasts, removed when it ends. Empty = tint only.")]
+        public GameObject vfxPrefab;
     }
 }

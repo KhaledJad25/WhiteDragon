@@ -20,13 +20,13 @@ namespace WhiteDragon
 
         CharacterController controller;
         StatusReceiver statuses;
-        Renderer[] renderers;
+        RendererTint tint;
+        GameObject visual;
         PlayerHealth target;
         CharacterController targetController;
         float health;
         float verticalVelocity;
         float nextContactTime;
-        float flashTimer;
         bool dead;
         bool dormant;
         bool initialized;
@@ -34,21 +34,35 @@ namespace WhiteDragon
         public bool IsDead => dead;
         public bool IsDormant => dormant;
         public float Health => health;
+        /// <summary>The spawned visualPrefab instance, or null when using placeholder shapes.</summary>
+        public GameObject Visual => visual;
         public event Action<Enemy> Died;
 
         Color Tint => definition != null ? definition.tint : Color.grey;
 
         void Awake() => Initialize();
 
-        void Initialize()
+        public void Initialize()
         {
             if (initialized) return;
             initialized = true;
             controller = GetComponent<CharacterController>();
             statuses = GetComponent<StatusReceiver>();
-            renderers = GetComponentsInChildren<Renderer>();
             health = definition != null ? definition.maxHealth : 10f;
-            if (Application.isPlaying) SetColor(Tint);
+            tint = RendererTint.For(gameObject);
+
+            if (definition != null && definition.visualPrefab != null)
+            {
+                foreach (var placeholder in GetComponentsInChildren<Renderer>()) placeholder.enabled = false;
+                visual = Instantiate(definition.visualPrefab, transform, false);
+                visual.name = definition.visualPrefab.name;
+                visual.transform.localPosition = Vector3.zero;
+                tint.SetRenderers(visual.GetComponentsInChildren<Renderer>(true));
+            }
+            else if (Application.isPlaying)
+            {
+                tint.SetBaseColor(Tint);
+            }
         }
 
         /// <summary>Dormant enemies stand still until their room activates them.</summary>
@@ -58,12 +72,6 @@ namespace WhiteDragon
         {
             if (dead) return;
             float dt = Time.deltaTime;
-
-            if (flashTimer > 0f)
-            {
-                flashTimer -= dt;
-                SetColor(Color.Lerp(Tint, flashColor, Mathf.Clamp01(flashTimer / flashTime)));
-            }
             if (dormant) return;
 
             if (target == null)
@@ -109,7 +117,7 @@ namespace WhiteDragon
             Initialize();
             if (dead) return;
             health -= amount;
-            flashTimer = flashTime;
+            tint.Flash(flashColor, flashTime);
             if (health <= 0f) Kill();
         }
 
@@ -123,12 +131,6 @@ namespace WhiteDragon
             GameFeel.OnKill(transform.position + Vector3.up, Tint);
             Died?.Invoke(this);
             if (Application.isPlaying) Destroy(gameObject);
-        }
-
-        void SetColor(Color c)
-        {
-            foreach (var r in renderers)
-                if (r != null) r.material.color = c;
         }
     }
 }

@@ -5,7 +5,8 @@ namespace WhiteDragon
 {
     /// <summary>
     /// Holds active statuses on anything damageable: ticks their damage through IDamageable,
-    /// exposes a combined SpeedMultiplier, and tints the renderers while any status is active.
+    /// exposes a combined SpeedMultiplier, tints the renderers while any status is active, and
+    /// attaches each status's optional vfxPrefab for as long as it lasts.
     /// </summary>
     public class StatusReceiver : MonoBehaviour
     {
@@ -15,15 +16,15 @@ namespace WhiteDragon
             public int Stacks;
             public float Remaining;
             public float TickTimer;
+            /// <summary>Spawned vfxPrefab instance, or null.</summary>
+            public GameObject Vfx;
         }
 
         [Range(0f, 1f)] public float tintStrength = 0.6f;
 
         readonly List<ActiveStatus> active = new List<ActiveStatus>();
         IDamageable damageable;
-        Renderer[] renderers;
-        MaterialPropertyBlock block;
-        bool tinted;
+        RendererTint tinter;
 
         public IReadOnlyList<ActiveStatus> Active => active;
 
@@ -51,7 +52,14 @@ namespace WhiteDragon
             var a = Find(definition);
             if (a == null)
             {
-                active.Add(new ActiveStatus { Definition = definition, Stacks = amount, Remaining = definition.duration });
+                var added = new ActiveStatus { Definition = definition, Stacks = amount, Remaining = definition.duration };
+                if (definition.vfxPrefab != null)
+                {
+                    added.Vfx = Instantiate(definition.vfxPrefab, transform, false);
+                    added.Vfx.name = definition.vfxPrefab.name;
+                    added.Vfx.transform.localPosition = Vector3.zero;
+                }
+                active.Add(added);
                 return;
             }
             switch (definition.stacking)
@@ -69,7 +77,10 @@ namespace WhiteDragon
             }
         }
 
-        public void ClearAll() => active.Clear();
+        public void ClearAll()
+        {
+            foreach (var a in active.ToArray()) Remove(a);
+        }
 
         void Update() => Tick(Time.deltaTime);
 
@@ -97,34 +108,24 @@ namespace WhiteDragon
                     }
                 }
 
-                if (a.Remaining <= 0f) active.Remove(a);
+                if (a.Remaining <= 0f && active.Contains(a)) Remove(a);
             }
         }
 
         void LateUpdate()
         {
-            if (renderers == null) renderers = GetComponentsInChildren<Renderer>();
-            if (block == null) block = new MaterialPropertyBlock();
+            if (tinter == null) tinter = RendererTint.For(gameObject);
+            if (active.Count == 0) tinter.SetOverlay(Color.clear, 0f);
+            else tinter.SetOverlay(active[active.Count - 1].Definition.tint, tintStrength);
+        }
 
-            if (active.Count == 0)
-            {
-                if (!tinted) return;
-                foreach (var r in renderers) r.SetPropertyBlock(null);
-                tinted = false;
-                return;
-            }
-
-            Color tint = active[active.Count - 1].Definition.tint;
-            foreach (var r in renderers)
-            {
-                if (r.sharedMaterial == null) continue;
-                Color c = Color.Lerp(r.sharedMaterial.color, tint, tintStrength);
-                block.Clear();
-                block.SetColor("_Color", c);
-                block.SetColor("_BaseColor", c);
-                r.SetPropertyBlock(block);
-            }
-            tinted = true;
+        void Remove(ActiveStatus a)
+        {
+            active.Remove(a);
+            if (a.Vfx == null) return;
+            if (Application.isPlaying) Destroy(a.Vfx);
+            else DestroyImmediate(a.Vfx);
+            a.Vfx = null;
         }
 
         ActiveStatus Find(StatusEffectDefinition definition)

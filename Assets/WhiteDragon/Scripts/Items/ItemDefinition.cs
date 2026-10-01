@@ -37,6 +37,12 @@ namespace WhiteDragon
         [Tooltip("Empty means always available. Otherwise the item can only appear after this hidden unlock.")]
         public string requiredUnlockId = "";
 
+        [Header("Art (optional)")]
+        [Tooltip("2D icon for future UI (HUD, item lists). Not shown anywhere yet.")]
+        public Sprite icon;
+        [Tooltip("Model floating on the pedestal, replacing the rarity-colored sphere. Centered on its pivot, about 0.5 m across. Empty = sphere.")]
+        public GameObject worldPrefab;
+
         /// <summary>One line describing what the item does, for tools and debugging.</summary>
         public string Summary()
         {
