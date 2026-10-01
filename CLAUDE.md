@@ -26,6 +26,7 @@ Content must be EASY to add, change, and remove in the Unity Editor, by a human 
 - Use Unity 6 APIs: FindAnyObjectByType, FindObjectsByType with a sort mode. Avoid deprecated calls.
 - Keyboard and mouse only. Input actions are created in code. HUD and debug panel use OnGUI. Do not use UI Toolkit or UI Builder.
 - Editor-only authoring tools go in Assets/WhiteDragon/Editor and must never change runtime behavior.
+- Summary() methods are for editor and debug tools only. Never show them in player-facing UI, since they can mention unlock requirements.
 
 ## Progression rules (hidden progression)
 - Unlocks widen what CAN appear in future runs. They never raise baseline stats.
