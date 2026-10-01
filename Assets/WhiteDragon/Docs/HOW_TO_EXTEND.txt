@@ -1,0 +1,106 @@
+WHITEDRAGON - HOW TO EXTEND
+===========================
+All content lives under Assets/WhiteDragon. Data assets go in Assets/WhiteDragon/Data/Resources/<Folder>
+(Items, Synergies, Effects, Statuses, Enemies). Everything is placeholder and may change.
+After any change: Tools/WhiteDragon/Run Tests (summary appears in the Console).
+In play mode, F1 opens the debug panel: add any item, apply statuses, change seeds, test health.
+
+
+1. ADD AN ITEM (no code)
+   1. Project window > Data/Resources/Items > right-click > Create > WhiteDragon > Item.
+   2. id: unique, lowercase (e.g. "iron_tooth"). displayName and description are shown on pedestals.
+   3. tags: lowercase words used by synergies (e.g. "rock", "fire").
+   4. statModifiers: add rows of stat + kind (Flat / PercentAdd / Multiply) + value.
+      Formula: (base + Flat) x (1 + PercentAdd) x Multiply. 0.25 PercentAdd = +25%.
+   5. recipeEdits: extra projectiles, spread, pierce, size (keep sizeMultiplier 1 for no change),
+      optional damage type override.
+   6. effects: drag ShotEffect assets from Data/Resources/Effects.
+   7. rarity, poolIds (e.g. "normal", "treasure", "boss"), weightMultiplier (1 = normal odds,
+      0 = never rolls), requiredUnlockId (leave empty = always available).
+   8. Play, press F1, click Add next to the item to test it.
+
+2. ADD A SYNERGY (no code)
+   1. Data/Resources/Synergies > Create > WhiteDragon > Synergy.
+   2. Set tag (matches item tags, case-insensitive) and requiredCount (items needed).
+   3. Fill statModifiers, recipeEdits and effects exactly like an item.
+   4. It turns on when the player holds requiredCount items with that tag and off when they don't.
+      It is never applied twice.
+
+3. ADD A SHOT EFFECT (one small class + one asset)
+   1. Create Scripts/Combat/<Name>Effect.cs. File name = class name, namespace WhiteDragon.
+   2. class <Name>Effect : ShotEffect, with [CreateAssetMenu(menuName = "WhiteDragon/Effects/<Name>")].
+   3. Override only the hooks you need:
+        ModifyRecipe(recipe, stacks)          before firing (change count, damage, tags...)
+        OnSpawn(shot) / OnUpdate(shot, dt)    while flying (shot.Projectile gives Velocity,
+                                              GravityScale, Recipe, Owner, transform)
+        OnHit(shot, target, point)            after the rock damaged something
+   4. The asset is shared: never store per-shot data in fields. Return a small object from
+      CreateState() and read it back from shot.State. Scale strength by shot.Stacks.
+   5. Gameplay randomness: RunSession.Rng with RandomStream.Combat. Never UnityEngine.Random.
+   6. Do NOT edit Projectile.cs. Example to copy: SplitOnHitEffect.cs or HomingEffect.cs.
+   7. Create the asset in Data/Resources/Effects and drag it into an item's or synergy's effects.
+
+4. ADD A STATUS EFFECT (no code)
+   1. Data/Resources/Statuses > Create > WhiteDragon > Status Effect.
+   2. Fill id, displayName, duration, tickInterval, damagePerSecond (per stack),
+      speedMultiplier (1 = none, 0.5 = half speed), tint, stacking
+      (RefreshDuration / StackIntensity / Ignore), maxStacks.
+   3. Data/Resources/Effects > Create > WhiteDragon > Effects > Apply Status. Set its status field.
+   4. Put that effect on an item or synergy. Each extra stack of the effect = +1 intensity.
+   5. The F1 panel automatically gets a button to apply it to the nearest enemy.
+   (Targets need a StatusReceiver component; Enemy adds one automatically.)
+
+5. ADD A POOL (no code)
+   1. Type the new pool name (lowercase) into poolIds on the items that belong to it.
+   2. Set an ItemPedestal's pool field to the same name.
+   3. If the pool has no eligible item, the pedestal falls back to "normal".
+   4. The F1 panel lists item counts per pool automatically.
+
+6. ADD A STAT
+   1. Append one line at the END of the StatType enum (Scripts/Core/StatType.cs). Never reorder.
+   2. If its starting value is not 0, add a case in StatBlock.DefaultBase.
+   3. Read it where it matters: GetComponent<PlayerStats>().Stats.Get(StatType.YourStat).
+   4. Items and synergies can modify it immediately; the F1 panel shows it automatically.
+
+7. ADD AN ENEMY
+   1. Data/Resources/Enemies > Create > WhiteDragon > Enemy. Fill maxHealth, moveSpeed,
+      contactDamage (half hearts) and tint.
+   2. In the scene: empty GameObject + CharacterController (set height, radius, center at half
+      height) + Enemy (StatusReceiver is added for you). Assign the definition.
+   3. Add primitive children for the look and REMOVE their colliders.
+      (Keep shapes chunky and exaggerated so they read at a distance.)
+   4. Drag the enemy into a RoomController's enemies list so the room wakes it and waits for it.
+   5. A new BEHAVIOR (ranged, charging...) needs code: write a new MonoBehaviour that implements
+      IDamageable and is driven by an EnemyDefinition, using Enemy.cs as the template.
+
+8. ADD A DAMAGE TYPE
+   1. Append one line at the END of the DamageType enum (Scripts/Combat/DamageType.cs).
+   2. Add its rock tint in DamageTypeColors.Tint (otherwise it shows the Physical color).
+   3. Use it from any item or synergy: recipeEdits > overrideDamageType + damageType.
+   (There are no resistances yet; a damage type is currently visual and a hook for later.)
+
+9. ADD A RARITY
+   1. Append one line at the END of the ItemRarity enum (Scripts/Items/ItemRarity.cs).
+   2. Add its base weight at the end of BaseRarityWeights in ItemPoolRoller.cs
+      (otherwise it gets weight 1). Luck scales it by its position in the enum automatically.
+   3. Add its orb color in ItemPedestal.RarityColor (otherwise it shows grey).
+
+10. ADD A CHARACTER (not built yet; smallest path)
+   1. Today the player is the "Player" object in Sandbox.unity; its base stats come from
+      StatBlock.DefaultBase and its hearts from PlayerHealth.startingContainers.
+   2. Write one ScriptableObject CharacterDefinition: displayName, base stat overrides
+      (stat + value), starting items, starting red containers / soul / dark hearts.
+   3. Write one MonoBehaviour CharacterApplier on the Player that, in Awake, calls
+      Stats.SetBase for each override, sets startingContainers before health is first used,
+      and adds starting items to PlayerInventory.
+   4. Pick the character by assigning the asset (later: a selection screen).
+   5. Never let unlocks raise baseline stats; unlocks only widen what CAN appear.
+
+
+RULES THAT KEEP CONTENT EASY TO CHANGE
+- Enums (StatType, DamageType, ItemRarity, RandomStream): append only, never reorder.
+- Gameplay randomness: RunSession.Rng.<Method>(RandomStream.X, ...). Cosmetic only: UnityEngine.Random.
+- Unlock progress is hidden: never show locked items, counts or unlock text to the player.
+- Static state must reset in a [RuntimeInitializeOnLoadMethod(SubsystemRegistration)] method.
+- One main type per file; file name = class name; namespace WhiteDragon.
+- Tools/WhiteDragon/Create Starter Content recreates missing starter assets and never overwrites.

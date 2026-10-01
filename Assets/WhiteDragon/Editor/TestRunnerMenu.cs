@@ -46,7 +46,7 @@ namespace WhiteDragon
                     return;
                 }
                 if (r.TestStatus == TestStatus.Failed)
-                    sb.AppendLine($"{r.FullName}: {r.Message}");
+                    sb.AppendLine($"{r.FullName}: {r.Message}\n{r.StackTrace}");
             }
         }
     }

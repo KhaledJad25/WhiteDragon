@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d0cbb67066203942adb236b10298afe, type: 3}
+  m_Name: Ember Coal
+  m_EditorClassIdentifier: WhiteDragon.Runtime::WhiteDragon.ItemDefinition
+  id: ember_coal
+  displayName: Ember Coal
+  description: Rocks set foes ablaze.
+  tags:
+  - fire
+  statModifiers: []
+  recipeEdits:
+    projectileCountAdd: 0
+    spreadAddDegrees: 0
+    pierceAdd: 0
+    sizeMultiplier: 1
+    overrideDamageType: 1
+    damageType: 1
+  effects:
+  - {fileID: 11400000, guid: 536e17d866122c34abaf6f27dd205975, type: 2}
+  rarity: 1
+  poolIds:
+  - treasure
+  weightMultiplier: 1
+  requiredUnlockId: 

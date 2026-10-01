@@ -46,6 +46,8 @@ namespace WhiteDragon
         void Die()
         {
             dead = true;
+            var statuses = GetComponent<StatusReceiver>();
+            if (statuses != null) statuses.ClearAll();
             GameFeel.OnKill(transform.position + Vector3.up, tint);
             SetVisible(false);
             Invoke(nameof(Respawn), respawnDelay);

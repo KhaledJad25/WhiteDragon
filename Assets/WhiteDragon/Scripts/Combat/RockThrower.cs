@@ -34,9 +34,8 @@ namespace WhiteDragon
 
         public ShotRecipe BuildRecipe()
         {
-            var recipe = ShotRecipe.FromStats(stats.Stats);
-            recipe.Clamp();
-            return recipe;
+            var inventory = GetComponent<PlayerInventory>();
+            return ShotRecipeBuilder.Build(stats.Stats, inventory != null ? inventory.Loadout : null);
         }
 
         public void Throw()

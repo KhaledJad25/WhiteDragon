@@ -15,6 +15,7 @@ namespace WhiteDragon
 
         public static void Spawn(Vector3 position, float amount, Color color)
         {
+            if (!Application.isPlaying) return;
             var go = new GameObject("DamageNumber");
             go.transform.position = position + Vector3.up * 0.3f;
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");

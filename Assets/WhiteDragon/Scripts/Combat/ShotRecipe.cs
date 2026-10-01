@@ -24,6 +24,8 @@ namespace WhiteDragon
         public int Pierce;
         public DamageType DamageType = DamageType.Physical;
         public readonly HashSet<string> Tags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>Each effect appears once, with how many sources granted it.</summary>
+        public readonly List<EffectStack> Effects = new List<EffectStack>();
 
         public static ShotRecipe FromStats(StatBlock stats)
         {
@@ -33,6 +35,43 @@ namespace WhiteDragon
                 Speed = stats.Get(StatType.ProjectileSpeed),
                 Range = stats.Get(StatType.Range),
             };
+        }
+
+        public void AddEffect(ShotEffect effect, int stacks = 1)
+        {
+            if (effect == null || stacks <= 0) return;
+            foreach (var e in Effects)
+            {
+                if (e.Effect != effect) continue;
+                e.Stacks += stacks;
+                return;
+            }
+            Effects.Add(new EffectStack(effect, stacks));
+        }
+
+        public int GetStacks(ShotEffect effect)
+        {
+            foreach (var e in Effects)
+                if (e.Effect == effect) return e.Stacks;
+            return 0;
+        }
+
+        public ShotRecipe Clone()
+        {
+            var copy = new ShotRecipe
+            {
+                Damage = Damage,
+                Speed = Speed,
+                Range = Range,
+                SizeScale = SizeScale,
+                Count = Count,
+                SpreadDegrees = SpreadDegrees,
+                Pierce = Pierce,
+                DamageType = DamageType,
+            };
+            copy.Tags.UnionWith(Tags);
+            foreach (var e in Effects) copy.Effects.Add(new EffectStack(e.Effect, e.Stacks));
+            return copy;
         }
 
         public void Clamp()

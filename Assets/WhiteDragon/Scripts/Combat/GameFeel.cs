@@ -19,7 +19,7 @@ namespace WhiteDragon
         static GameFeel instance;
 
         AudioSource audioSource;
-        AudioClip throwClip, hitClip, killClip, wallClip;
+        AudioClip throwClip, hitClip, killClip, wallClip, hurtClip;
         float trauma;
         float hitStopUntil;
         bool hitStopActive;
@@ -43,11 +43,13 @@ namespace WhiteDragon
 
         public static void OnThrow(Vector3 position)
         {
+            if (!Application.isPlaying) return;
             Instance.Play(Instance.throwClip, 0.35f);
         }
 
         public static void OnHit(Vector3 point, Color color)
         {
+            if (!Application.isPlaying) return;
             HitStop(0.04f);
             Shake(0.15f);
             Burst(point, color, 8, 3f);
@@ -56,6 +58,7 @@ namespace WhiteDragon
 
         public static void OnKill(Vector3 point, Color color)
         {
+            if (!Application.isPlaying) return;
             HitStop(0.09f);
             Shake(0.4f);
             Burst(point, color, 30, 6f);
@@ -64,14 +67,25 @@ namespace WhiteDragon
 
         public static void OnWallImpact(Vector3 point, Color color)
         {
+            if (!Application.isPlaying) return;
             Burst(point, color, 5, 2f);
             Instance.Play(Instance.wallClip, 0.4f);
+        }
+
+        public static void OnPlayerHurt(Vector3 point)
+        {
+            if (!Application.isPlaying) return;
+            HitStop(0.08f);
+            Shake(0.6f);
+            Burst(point, new Color(0.6f, 0.02f, 0.02f), 16, 4f);
+            Instance.Play(Instance.hurtClip, 1f);
         }
 
         // ---- Building blocks ----
 
         public static void HitStop(float seconds)
         {
+            if (!Application.isPlaying) return;
             if (HitStopScale <= 0f || seconds <= 0f) return;
             var i = Instance;
             i.hitStopUntil = Mathf.Max(i.hitStopUntil, Time.unscaledTime + seconds * HitStopScale);
@@ -81,12 +95,14 @@ namespace WhiteDragon
 
         public static void Shake(float amount)
         {
+            if (!Application.isPlaying) return;
             var i = Instance;
             i.trauma = Mathf.Clamp01(i.trauma + amount * ShakeScale);
         }
 
         public static void Burst(Vector3 position, Color color, int count, float speed)
         {
+            if (!Application.isPlaying) return;
             var go = new GameObject("Burst");
             go.transform.position = position;
             var ps = go.AddComponent<ParticleSystem>();
@@ -130,6 +146,7 @@ namespace WhiteDragon
             hitClip = MakeClip("Hit", 0.12f, t => (Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(180f, 60f, t) * t * 0.12f) + Noise() * 0.3f) * Mathf.Pow(1f - t, 3f));
             killClip = MakeClip("Kill", 0.35f, t => Mathf.Sign(Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(300f, 40f, t) * t * 0.35f)) * 0.4f * Mathf.Pow(1f - t, 2f));
             wallClip = MakeClip("Wall", 0.05f, t => Noise() * Mathf.Pow(1f - t, 4f) * 0.6f);
+            hurtClip = MakeClip("Hurt", 0.25f, t => (Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(120f, 45f, t) * t * 0.25f) * 0.8f + Noise() * 0.4f) * Mathf.Pow(1f - t, 2f));
         }
 
         void Update()
