@@ -3,6 +3,7 @@
     "rootNamespace": "WhiteDragon",
     "references": [
         "WhiteDragon.Runtime",
+        "WhiteDragon.Editor",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
