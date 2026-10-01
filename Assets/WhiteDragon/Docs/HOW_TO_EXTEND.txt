@@ -88,6 +88,52 @@ EDITOR TOOLS (menu Tools/WhiteDragon)
    5. Never let unlocks raise baseline stats; unlocks only widen what CAN appear.
 
 
+SWAPPING IN REAL ART (every slot is optional; empty = today's placeholder)
+Notes: the project uses the Built-in render pipeline. Store assets made for URP show pink: make a copy of
+the material under Assets/WhiteDragon/Art with the Standard shader and the same texture (never edit the
+store files). A spawned model's root is placed at zero on its socket, so put offsets on child objects.
+Colliders on rock models are removed automatically. Example: Art/ToonRTS/UD_demo_character_WD.prefab.
+
+A. ENEMY MODEL
+   1. Make a prefab variant of the model under Assets/WhiteDragon/Art (pivot at the feet, facing +Z).
+   2. On its Animator: assign a controller and turn OFF Apply Root Motion.
+      Suggested parameters: Bool "Moving"; Triggers "Attack", "Hit", "Die".
+   3. Add AnimatorStateDriver to the variant root. Mappings: Idle -> Bool Moving 0, Move -> Bool Moving 1,
+      Attack -> Trigger Attack, Hit -> Trigger Hit, Die -> Trigger Die.
+   4. In the EnemyDefinition: drag the variant into visualPrefab; set deathDelay to the death clip length.
+   5. Play: the placeholder shapes are hidden, Tint is no longer applied; hit flash and status tint still are.
+
+B. ITEM ICON AND WORLD MODEL
+   1. Item > icon: drag a Sprite (stored only; no UI shows icons yet).
+   2. Item > worldPrefab: drag a model about 0.5 m across, centered on its pivot. It bobs and spins on the
+      pedestal instead of the rarity-colored sphere.
+
+C. ROCK MODEL
+   1. Select Data/Resources/ProjectileVisuals.asset.
+   2. defaultPrefab = one rock model for every damage type, and/or add entries (damage type + prefab).
+      Author it at the base rock size (about 0.24 m across); it is scaled by the shot's size.
+   3. Any type without a model keeps the tinted sphere.
+
+D. HANDS (first-person arms)
+   1. Put the arms model as a child of Player/Head/Main Camera.
+   2. Add an empty child at the throwing palm, named "Hand"; drag it into Player > RockThrower > handSocket.
+      Rocks now appear there (empty = today's offset from the camera).
+   3. For animation: add AnimatorStateDriver to the arms (the Player raises Idle, Move, Attack on each throw,
+      Hit, Die). Map Attack to a throw trigger.
+
+E. STATUS EFFECTS
+   1. Status asset > vfxPrefab: drag a particle or mesh effect. It is attached to the target while the
+      status lasts and removed when it ends. The colored tint still applies on top.
+
+F. SOUNDS AND HIT PARTICLES
+   1. Select Data/Resources/GameFeelSettings.asset.
+   2. Drag clips into throwSound, hitSound, killSound, impactSound, hurtSound; any empty slot keeps its
+      generated placeholder.
+   3. hitParticles / killParticles / impactParticles: prefabs spawned at the point and removed after
+      particleLifetime seconds; empty = generated burst.
+   4. shakeScale, hitStopScale and soundVolume are the starting strengths (1, 1, 0.6 = today).
+
+
 RULES THAT KEEP CONTENT EASY TO CHANGE
 - Enums (StatType, DamageType, ItemRarity, RandomStream): append only, never reorder.
 - Never rename, remove or reorder serialized fields. Add new fields at the end.
