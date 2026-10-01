@@ -2,7 +2,9 @@
     "name": "WhiteDragon.Editor",
     "rootNamespace": "WhiteDragon",
     "references": [
-        "WhiteDragon.Runtime"
+        "WhiteDragon.Runtime",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
     ],
     "includePlatforms": [
         "Editor"
