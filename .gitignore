@@ -112,3 +112,7 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Third-party Asset Store content (not committed)
+/Assets/Toon_RTS/
+/Assets/Toon_RTS.meta

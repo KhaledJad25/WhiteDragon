@@ -21,6 +21,7 @@ namespace WhiteDragon
         CharacterController controller;
         StatusReceiver statuses;
         RendererTint tint;
+        ActorStateEvents events;
         GameObject visual;
         PlayerHealth target;
         CharacterController targetController;
@@ -36,6 +37,8 @@ namespace WhiteDragon
         public float Health => health;
         /// <summary>The spawned visualPrefab instance, or null when using placeholder shapes.</summary>
         public GameObject Visual => visual;
+        /// <summary>Idle / Move / Attack / Hit / Die, for animation hooks.</summary>
+        public ActorStateEvents Events => events;
         public event Action<Enemy> Died;
 
         Color Tint => definition != null ? definition.tint : Color.grey;
@@ -50,6 +53,7 @@ namespace WhiteDragon
             statuses = GetComponent<StatusReceiver>();
             health = definition != null ? definition.maxHealth : 10f;
             tint = RendererTint.For(gameObject);
+            events = ActorStateEvents.For(gameObject);
 
             if (definition != null && definition.visualPrefab != null)
             {
@@ -68,17 +72,27 @@ namespace WhiteDragon
         /// <summary>Dormant enemies stand still until their room activates them.</summary>
         public void SetDormant(bool value) => dormant = value;
 
-        void Update()
+        /// <summary>Chase this player instead of searching the scene for one.</summary>
+        public void SetTarget(PlayerHealth player)
         {
-            if (dead) return;
-            float dt = Time.deltaTime;
-            if (dormant) return;
+            target = player;
+            targetController = player != null ? player.GetComponent<CharacterController>() : null;
+        }
 
-            if (target == null)
+        void Update() => Tick(Time.deltaTime);
+
+        /// <summary>One step of chasing and contact damage (Update calls this every frame).</summary>
+        public void Tick(float dt)
+        {
+            Initialize();
+            if (dead) return;
+            if (dormant)
             {
-                target = FindAnyObjectByType<PlayerHealth>();
-                if (target != null) targetController = target.GetComponent<CharacterController>();
+                events.Raise(ActorState.Idle);
+                return;
             }
+
+            if (target == null) SetTarget(FindAnyObjectByType<PlayerHealth>());
 
             Vector3 move = Vector3.zero;
             if (target != null && !target.State.IsDead)
@@ -94,7 +108,12 @@ namespace WhiteDragon
                     float speed = (definition != null ? definition.moveSpeed : 2f) * statuses.SpeedMultiplier;
                     move = dir * speed;
                 }
+                events.Raise(ActorStateEvents.Locomotion(move.magnitude));
                 TryContact(distance, verticalGap);
+            }
+            else
+            {
+                events.Raise(ActorState.Idle);
             }
 
             if (controller.isGrounded && verticalVelocity < 0f) verticalVelocity = -1f;
@@ -109,6 +128,7 @@ namespace WhiteDragon
                           + contactReach;
             if (horizontalDistance > reach || verticalGap > controller.height || Time.time < nextContactTime) return;
             nextContactTime = Time.time + contactCooldown;
+            events.Raise(ActorState.Attack);
             target.Damage(definition != null ? definition.contactDamage : 1);
         }
 
@@ -119,6 +139,7 @@ namespace WhiteDragon
             health -= amount;
             tint.Flash(flashColor, flashTime);
             if (health <= 0f) Kill();
+            else events.Raise(ActorState.Hit);
         }
 
         public void Kill()
@@ -128,9 +149,19 @@ namespace WhiteDragon
             dead = true;
             health = 0f;
             statuses.ClearAll();
+            events.Raise(ActorState.Die);
             GameFeel.OnKill(transform.position + Vector3.up, Tint);
             Died?.Invoke(this);
-            if (Application.isPlaying) Destroy(gameObject);
+            if (!Application.isPlaying) return;
+
+            float delay = definition != null ? definition.deathDelay : 0f;
+            if (delay <= 0f)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            controller.enabled = false;
+            Destroy(gameObject, delay);
         }
     }
 }

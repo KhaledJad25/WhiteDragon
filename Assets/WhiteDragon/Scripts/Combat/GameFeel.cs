@@ -17,9 +17,10 @@ namespace WhiteDragon
         const float MaxShakeAngle = 3f;
 
         static GameFeel instance;
+        static readonly System.Collections.Generic.Dictionary<GameSound, AudioClip> generated =
+            new System.Collections.Generic.Dictionary<GameSound, AudioClip>();
 
         AudioSource audioSource;
-        AudioClip throwClip, hitClip, killClip, wallClip, hurtClip;
         float trauma;
         float hitStopUntil;
         bool hitStopActive;
@@ -44,7 +45,7 @@ namespace WhiteDragon
         public static void OnThrow(Vector3 position)
         {
             if (!Application.isPlaying) return;
-            Instance.Play(Instance.throwClip, 0.35f);
+            Instance.Play(GameSound.Throw, 0.35f);
         }
 
         public static void OnHit(Vector3 point, Color color)
@@ -52,8 +53,8 @@ namespace WhiteDragon
             if (!Application.isPlaying) return;
             HitStop(0.04f);
             Shake(0.15f);
-            Burst(point, color, 8, 3f);
-            Instance.Play(Instance.hitClip, 0.8f);
+            Particles(Settings?.hitParticles, point, color, 8, 3f);
+            Instance.Play(GameSound.Hit, 0.8f);
         }
 
         public static void OnKill(Vector3 point, Color color)
@@ -61,15 +62,15 @@ namespace WhiteDragon
             if (!Application.isPlaying) return;
             HitStop(0.09f);
             Shake(0.4f);
-            Burst(point, color, 30, 6f);
-            Instance.Play(Instance.killClip, 0.9f);
+            Particles(Settings?.killParticles, point, color, 30, 6f);
+            Instance.Play(GameSound.Kill, 0.9f);
         }
 
         public static void OnWallImpact(Vector3 point, Color color)
         {
             if (!Application.isPlaying) return;
-            Burst(point, color, 5, 2f);
-            Instance.Play(Instance.wallClip, 0.4f);
+            Particles(Settings?.impactParticles, point, color, 5, 2f);
+            Instance.Play(GameSound.Impact, 0.4f);
         }
 
         public static void OnPlayerHurt(Vector3 point)
@@ -78,7 +79,37 @@ namespace WhiteDragon
             HitStop(0.08f);
             Shake(0.6f);
             Burst(point, new Color(0.6f, 0.02f, 0.02f), 16, 4f);
-            Instance.Play(Instance.hurtClip, 1f);
+            Instance.Play(GameSound.Hurt, 1f);
+        }
+
+        // ---- Settings ----
+
+        static GameFeelSettings Settings => GameFeelSettings.Current;
+
+        /// <summary>The clip played for a sound: the settings asset's clip, or the generated placeholder.</summary>
+        public static AudioClip ClipFor(GameSound sound)
+        {
+            var configured = Settings != null ? Settings.Clip(sound) : null;
+            return configured != null ? configured : Generated(sound);
+        }
+
+        /// <summary>Copies the strength values from a settings asset. null keeps the current values.</summary>
+        public static void ApplySettings(GameFeelSettings settings)
+        {
+            if (settings == null) return;
+            ShakeScale = settings.shakeScale;
+            HitStopScale = settings.hitStopScale;
+            SoundVolume = settings.soundVolume;
+        }
+
+        static void Particles(GameObject prefab, Vector3 point, Color color, int count, float speed)
+        {
+            if (prefab == null)
+            {
+                Burst(point, color, count, speed);
+                return;
+            }
+            Destroy(Instantiate(prefab, point, Quaternion.identity), Settings.particleLifetime);
         }
 
         // ---- Building blocks ----
@@ -129,8 +160,9 @@ namespace WhiteDragon
             Destroy(go, 1.5f);
         }
 
-        void Play(AudioClip clip, float volume)
+        void Play(GameSound sound, float volume)
         {
+            var clip = ClipFor(sound);
             if (SoundVolume <= 0f || clip == null) return;
             audioSource.pitch = Random.Range(0.9f, 1.1f);
             audioSource.PlayOneShot(clip, volume * SoundVolume);
@@ -142,11 +174,23 @@ namespace WhiteDragon
         {
             audioSource = gameObject.AddComponent<AudioSource>();
             audioSource.playOnAwake = false;
-            throwClip = MakeClip("Throw", 0.08f, t => Noise() * Mathf.Pow(1f - t, 2f) * 0.5f);
-            hitClip = MakeClip("Hit", 0.12f, t => (Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(180f, 60f, t) * t * 0.12f) + Noise() * 0.3f) * Mathf.Pow(1f - t, 3f));
-            killClip = MakeClip("Kill", 0.35f, t => Mathf.Sign(Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(300f, 40f, t) * t * 0.35f)) * 0.4f * Mathf.Pow(1f - t, 2f));
-            wallClip = MakeClip("Wall", 0.05f, t => Noise() * Mathf.Pow(1f - t, 4f) * 0.6f);
-            hurtClip = MakeClip("Hurt", 0.25f, t => (Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(120f, 45f, t) * t * 0.25f) * 0.8f + Noise() * 0.4f) * Mathf.Pow(1f - t, 2f));
+        }
+
+        /// <summary>The code-generated placeholder clip for a sound (created once).</summary>
+        public static AudioClip Generated(GameSound sound)
+        {
+            if (generated.TryGetValue(sound, out var clip) && clip != null) return clip;
+            switch (sound)
+            {
+                case GameSound.Throw: clip = MakeClip("Throw", 0.08f, t => Noise() * Mathf.Pow(1f - t, 2f) * 0.5f); break;
+                case GameSound.Hit: clip = MakeClip("Hit", 0.12f, t => (Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(180f, 60f, t) * t * 0.12f) + Noise() * 0.3f) * Mathf.Pow(1f - t, 3f)); break;
+                case GameSound.Kill: clip = MakeClip("Kill", 0.35f, t => Mathf.Sign(Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(300f, 40f, t) * t * 0.35f)) * 0.4f * Mathf.Pow(1f - t, 2f)); break;
+                case GameSound.Impact: clip = MakeClip("Wall", 0.05f, t => Noise() * Mathf.Pow(1f - t, 4f) * 0.6f); break;
+                case GameSound.Hurt: clip = MakeClip("Hurt", 0.25f, t => (Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(120f, 45f, t) * t * 0.25f) * 0.8f + Noise() * 0.4f) * Mathf.Pow(1f - t, 2f)); break;
+                default: return null;
+            }
+            generated[sound] = clip;
+            return clip;
         }
 
         void Update()
@@ -201,6 +245,10 @@ namespace WhiteDragon
             HitStopScale = 1f;
             SoundVolume = 0.6f;
             Time.timeScale = 1f;
+            generated.Clear();
         }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void LoadSettings() => ApplySettings(GameFeelSettings.Current);
     }
 }

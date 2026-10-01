@@ -30,5 +30,8 @@ namespace WhiteDragon
         [Header("Art (optional)")]
         [Tooltip("Model spawned on the enemy, replacing the placeholder shapes. Pivot at the feet, facing +Z. Empty = placeholder shapes tinted with Tint.")]
         public GameObject visualPrefab;
+        [Tooltip("Seconds the body stays after death so a death animation can play. It stops moving and stops blocking rocks at once. 0 = removed immediately.")]
+        [Min(0f)]
+        public float deathDelay;
     }
 }

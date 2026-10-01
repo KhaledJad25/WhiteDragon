@@ -57,6 +57,7 @@ namespace WhiteDragon
                            * stats.Stats.Get(StatType.MoveSpeed);
             float rate = wish.sqrMagnitude > 0.0001f ? acceleration : deceleration;
             horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, wish, rate * dt);
+            ActorStateEvents.For(gameObject).Raise(ActorStateEvents.Locomotion(horizontalVelocity.magnitude));
 
             if (controller.isGrounded)
             {

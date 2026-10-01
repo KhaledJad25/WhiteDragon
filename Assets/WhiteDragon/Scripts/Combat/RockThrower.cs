@@ -29,7 +29,7 @@ namespace WhiteDragon
         void Update()
         {
             if (!CursorState.Locked || !GameInput.Fire.IsPressed() || Time.time < nextThrowTime) return;
-            float rate = Mathf.Max(0.1f, stats.Stats.Get(StatType.FireRate));
+            float rate = Mathf.Max(0.1f, Stats.Stats.Get(StatType.FireRate));
             nextThrowTime = Time.time + 1f / rate;
             Throw();
         }
@@ -37,14 +37,17 @@ namespace WhiteDragon
         public ShotRecipe BuildRecipe()
         {
             var inventory = GetComponent<PlayerInventory>();
-            return ShotRecipeBuilder.Build(stats.Stats, inventory != null ? inventory.Loadout : null);
+            return ShotRecipeBuilder.Build(Stats.Stats, inventory != null ? inventory.Loadout : null);
         }
+
+        PlayerStats Stats => stats != null ? stats : (stats = GetComponent<PlayerStats>());
 
         public void Throw()
         {
             var recipe = BuildRecipe();
             LastRecipe = recipe;
             ShotBuilt?.Invoke(recipe);
+            ActorStateEvents.For(gameObject).Raise(ActorState.Attack);
 
             Transform cam = aimCamera.transform;
             Vector3 aimPoint = FindAimPoint(cam.position, cam.forward);

@@ -19,11 +19,13 @@ namespace WhiteDragon
         {
             if (!State.TryDamage(halves, Time.time)) return false;
             GameFeel.OnPlayerHurt(transform.position + Vector3.up);
+            ActorStateEvents.For(gameObject).Raise(State.IsDead ? ActorState.Die : ActorState.Hit);
             return true;
         }
 
         void OnDied()
         {
+            ActorStateEvents.For(gameObject).Raise(ActorState.Die);
             var controller = GetComponent<PlayerController>();
             if (controller != null) controller.enabled = false;
             var thrower = GetComponent<RockThrower>();
