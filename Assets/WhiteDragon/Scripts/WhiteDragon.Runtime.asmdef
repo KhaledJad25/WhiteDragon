@@ -1,0 +1,16 @@
+{
+    "name": "WhiteDragon.Runtime",
+    "rootNamespace": "WhiteDragon",
+    "references": [
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
