@@ -30,6 +30,8 @@ namespace WhiteDragon
             CheckIds(synergies, s => s.id, "Synergy", issues);
             CheckIds(set.Statuses.Where(s => s != null), s => s.id, "Status", issues);
             CheckIds(set.Enemies.Where(e => e != null), e => e.id, "Enemy", issues);
+            CheckIds(set.Characters.Where(c => c != null), c => c.id, "Character", issues);
+            CheckCharacters(set.Characters.Where(c => c != null), issues);
             CheckLocations(set, issues);
             CheckItems(items, issues);
             CheckSynergies(synergies, items, issues);
@@ -152,6 +154,17 @@ namespace WhiteDragon
                     issues.Add(Warning("pool.empty",
                         $"Pool '{group.Key}' is used by {group.Count()} pedestal(s) but has no item that can appear (it falls back to 'normal').",
                         group.First().Source));
+            }
+        }
+
+        static void CheckCharacters(IEnumerable<CharacterDefinition> characters, List<ContentIssue> issues)
+        {
+            foreach (var c in characters)
+            {
+                if (c.startingItems == null) continue;
+                for (int n = 0; n < c.startingItems.Count; n++)
+                    if (c.startingItems[n] == null)
+                        issues.Add(Error("character.nullitem", $"Character '{c.name}' has an empty slot in startingItems (element {n}).", c));
             }
         }
 

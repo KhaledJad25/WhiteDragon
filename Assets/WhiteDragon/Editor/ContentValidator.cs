@@ -31,6 +31,7 @@ namespace WhiteDragon
             Add(set, set.Effects);
             Add(set, set.Statuses);
             Add(set, set.Enemies);
+            Add(set, set.Characters);
             foreach (var p in Object.FindObjectsByType<ItemPedestal>(FindObjectsInactive.Include))
                 set.PedestalPools.Add((p.pool, p));
             return ContentRules.Validate(set);

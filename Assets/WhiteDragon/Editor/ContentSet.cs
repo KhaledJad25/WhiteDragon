@@ -11,6 +11,7 @@ namespace WhiteDragon
         public readonly List<ShotEffect> Effects = new List<ShotEffect>();
         public readonly List<StatusEffectDefinition> Statuses = new List<StatusEffectDefinition>();
         public readonly List<EnemyDefinition> Enemies = new List<EnemyDefinition>();
+        public readonly List<CharacterDefinition> Characters = new List<CharacterDefinition>();
 
         /// <summary>Asset path per asset. Assets without a path skip the folder check.</summary>
         public readonly Dictionary<Object, string> Paths = new Dictionary<Object, string>();

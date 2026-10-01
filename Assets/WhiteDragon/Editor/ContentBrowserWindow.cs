@@ -10,7 +10,7 @@ namespace WhiteDragon
     /// <summary>Browse, search and filter all content. Click a row to select and ping the asset.</summary>
     public class ContentBrowserWindow : EditorWindow
     {
-        enum Tab { Items, Synergies, Effects, Statuses, Enemies }
+        enum Tab { Items, Synergies, Effects, Statuses, Enemies, Characters }
 
         static readonly string[] TabNames = Enum.GetNames(typeof(Tab));
         static readonly string[] Columns = { "Name", "Id", "Rarity", "Tags", "Pools" };
@@ -53,6 +53,10 @@ namespace WhiteDragon
             rows[Tab.Effects] = ContentCreator.FindAll<ShotEffect>().Select(EffectRow).ToList();
             rows[Tab.Statuses] = ContentCreator.FindAll<StatusEffectDefinition>().Select(StatusRow).ToList();
             rows[Tab.Enemies] = ContentCreator.FindAll<EnemyDefinition>().Select(EnemyRow).ToList();
+            rows[Tab.Characters] = ContentCreator.FindAll<CharacterDefinition>().Select(c => Finish(new Row
+            {
+                Asset = c, Name = Label(c.displayName, c), Id = c.id, Summary = c.Summary(),
+            })).ToList();
             foreach (var list in rows.Values) list.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
 
             string oldTag = tagOptions[Mathf.Clamp(tagFilter, 0, tagOptions.Length - 1)];
@@ -209,6 +213,7 @@ namespace WhiteDragon
                 case Tab.Effects: ContentCreator.NewShotEffect(); break;
                 case Tab.Statuses: ContentCreator.NewStatus(); break;
                 case Tab.Enemies: ContentCreator.NewEnemy(); break;
+                case Tab.Characters: ContentCreator.NewCharacter(); break;
             }
         }
     }

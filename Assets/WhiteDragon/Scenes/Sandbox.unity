@@ -2994,6 +2994,8 @@ GameObject:
   - component: {fileID: 1203007921}
   - component: {fileID: 1203007920}
   - component: {fileID: 1203007919}
+  - component: {fileID: 1203007923}
+  - component: {fileID: 1203007922}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -3183,6 +3185,32 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WhiteDragon.Runtime::WhiteDragon.PlayerHealth
   startingContainers: 3
+--- !u!114 &1203007922
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1203007910}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b867eebe45edc9b4e88ed92934c0e30c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: WhiteDragon.Runtime::WhiteDragon.DevTestLoadout
+  items: []
+--- !u!114 &1203007923
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1203007910}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a772dd6fd3896494c846cd059e383c90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: WhiteDragon.Runtime::WhiteDragon.CharacterApplier
+  character: {fileID: 11400000, guid: 58e7d10da7861ef4ebcd5e3492a83c9c, type: 2}
 --- !u!1 &1227125816
 GameObject:
   m_ObjectHideFlags: 0

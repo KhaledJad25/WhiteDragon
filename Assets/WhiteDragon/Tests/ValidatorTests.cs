@@ -243,6 +243,27 @@ namespace WhiteDragon
             Assert.IsTrue(issues.Where(i => i.Code == "status.tick").All(i => i.Asset == badTick));
         }
 
+        // ---------- Characters ----------
+
+        [Test]
+        public void Characters_IdsAndNullStartingItems()
+        {
+            var set = new ContentSet();
+            var a = Make<CharacterDefinition>("a");
+            a.id = "hero";
+            var b = Make<CharacterDefinition>("b");
+            b.id = "Hero";
+            var c = Make<CharacterDefinition>("c");
+            c.startingItems.Add(null);
+            c.startingItems.Add(Item("ok"));
+            set.Characters.AddRange(new[] { a, b, c });
+
+            var issues = Run(set);
+            Assert.AreEqual(2, Count(issues, "id.duplicate", IssueSeverity.Error));
+            Assert.AreEqual(1, Count(issues, "id.empty", IssueSeverity.Error));
+            Assert.AreEqual(1, Count(issues, "character.nullitem", IssueSeverity.Error));
+        }
+
         // ---------- Safety ----------
 
         [Test]

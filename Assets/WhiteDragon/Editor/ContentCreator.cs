@@ -62,9 +62,7 @@ namespace WhiteDragon
 
         [MenuItem(Menu + "Character", priority = 20)]
         public static void NewCharacter() =>
-            EditorUtility.DisplayDialog("Characters are coming",
-                "Character assets arrive in a later step of the authoring tools. Until then the player uses the default stats and hearts.",
-                "OK");
+            NamePromptWindow.Show("New Character", "New Character", name => CreateCharacter(name));
 
         // ---------- Creation (also used by the Content Browser) ----------
 
@@ -97,6 +95,14 @@ namespace WhiteDragon
             {
                 e.id = id;
                 e.displayName = name;
+            });
+
+        public static CharacterDefinition CreateCharacter(string name) =>
+            CreateWithId<CharacterDefinition>("Characters", name, c => c.id, (c, id) =>
+            {
+                c.id = id;
+                c.displayName = name;
+                c.startingRedContainers = 3;
             });
 
         public static ShotEffect CreateShotEffect(Type type, string name)
