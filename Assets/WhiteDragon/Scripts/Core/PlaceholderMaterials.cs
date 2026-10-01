@@ -16,7 +16,8 @@ namespace WhiteDragon
                 var shader = Shader.Find("Universal Render Pipeline/Lit")
                              ?? Shader.Find("Standard")
                              ?? Shader.Find("Sprites/Default");
-                m = new Material(shader) { color = color };
+                // One shared material per color; instancing lets many rocks of one damage type draw together.
+                m = new Material(shader) { color = color, enableInstancing = true };
                 lit[color] = m;
             }
             return m;

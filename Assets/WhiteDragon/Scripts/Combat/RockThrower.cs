@@ -15,7 +15,7 @@ namespace WhiteDragon
         public Transform handSocket;
 
         PlayerStats stats;
-        float nextThrowTime;
+        readonly FireTimer fireTimer = new FireTimer();
 
         public ShotRecipe LastRecipe { get; private set; }
         public event Action<ShotRecipe> ShotBuilt;
@@ -28,10 +28,10 @@ namespace WhiteDragon
 
         void Update()
         {
-            if (!CursorState.Locked || !GameInput.Fire.IsPressed() || Time.time < nextThrowTime) return;
+            bool held = CursorState.Locked && GameInput.Fire.IsPressed();
             float rate = Mathf.Max(0.1f, Stats.Stats.Get(StatType.FireRate));
-            nextThrowTime = Time.time + 1f / rate;
-            Throw();
+            int throws = fireTimer.Tick(Time.time, held, rate);
+            for (int i = 0; i < throws; i++) Throw();
         }
 
         public ShotRecipe BuildRecipe()

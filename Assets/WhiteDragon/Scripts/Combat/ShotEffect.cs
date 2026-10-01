@@ -18,6 +18,12 @@ namespace WhiteDragon
         /// <summary>Per-shot state object, or null if the effect needs none.</summary>
         public virtual object CreateState() => null;
 
+        /// <summary>
+        /// Optional, for pooled projectiles: clear a used state object for a new shot and return true
+        /// to reuse it (no allocation). The default returns false, so CreateState is called again.
+        /// </summary>
+        public virtual bool ResetState(object state) => false;
+
         public virtual void OnSpawn(ShotEffectInstance shot) { }
         public virtual void OnUpdate(ShotEffectInstance shot, float dt) { }
 

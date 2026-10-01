@@ -29,7 +29,17 @@ namespace WhiteDragon
             public float RetargetTimer;
         }
 
+        static readonly Collider[] overlapBuffer = new Collider[128];
+
         public override object CreateState() => new State();
+
+        public override bool ResetState(object state)
+        {
+            var s = (State)state;
+            s.Target = null;
+            s.RetargetTimer = 0f;
+            return true;
+        }
 
         public override void OnUpdate(ShotEffectInstance shot, float dt)
         {
@@ -62,8 +72,10 @@ namespace WhiteDragon
             Vector3 forward = p.Velocity.sqrMagnitude > 0f ? p.Velocity.normalized : p.transform.forward;
             Transform best = null;
             float bestDistance = float.MaxValue;
-            foreach (var col in Physics.OverlapSphere(pos, searchRadius, ~0, QueryTriggerInteraction.Ignore))
+            int count = Physics.OverlapSphereNonAlloc(pos, searchRadius, overlapBuffer, ~0, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
             {
+                var col = overlapBuffer[i];
                 if (p.Owner != null && col.transform.IsChildOf(p.Owner)) continue;
                 var damageable = col.GetComponentInParent<IDamageable>() as Component;
                 if (damageable == null) continue;

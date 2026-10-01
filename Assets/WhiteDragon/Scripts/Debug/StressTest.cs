@@ -22,6 +22,8 @@ namespace WhiteDragon
         [Tooltip("If above 0, spawn whatever is needed each frame to keep this many rocks alive (replaces rocks that hit things).")]
         public int keepRocksAlive;
         public float spreadDegrees = 60f;
+        [Tooltip("Degrees above horizontal the rocks are aimed. Steep (80) keeps homing rocks searching without finding ground enemies.")]
+        public float aimPitch = 45f;
         public float rockLifetime = 3f;
         public int enemyCount;
         public bool homingAndBurn;
@@ -178,8 +180,9 @@ namespace WhiteDragon
             }
             if (n <= 0) return;
             var recipe = homingAndBurn ? effectRecipe : plainRecipe;
-            Vector3 origin = player.position + Vector3.up * 1.6f + player.forward * 0.6f;
-            Quaternion aim = Quaternion.LookRotation(player.forward) * Quaternion.Euler(-45f, 0f, 0f);
+            // Steep aim launches from above the enemies crowding the player, so rocks are not hit on spawn.
+            Vector3 origin = player.position + Vector3.up * (aimPitch > 60f ? 4f : 1.6f) + player.forward * 0.6f;
+            Quaternion aim = Quaternion.LookRotation(player.forward) * Quaternion.Euler(-aimPitch, 0f, 0f);
             for (int k = 0; k < n; k++)
             {
                 // Golden-angle spiral inside the spread cone: deterministic, no randomness.
@@ -275,19 +278,29 @@ namespace WhiteDragon
             sb.AppendLine($"[Stress] recorders valid: gc={gcRecorder.Valid} update={updateRecorder.Valid} late={lateRecorder.Valid} batches={batchesRecorder.Valid} mainThread={mainThreadRecorder.Valid}");
             SetFrameCap(-1);
             // rocks = live rocks to keep alive; rate > 0 instead fires that many per second (rocks then = 0).
-            var scenarios = new (int rocks, float rate, int enemies, bool effects)[]
+            // steep: aim almost straight up so 600 homing rocks stay alive and keep searching (the steady heaviest case).
+            // noGui: OnGUI components off, to show how much garbage IMGUI itself makes.
+            var scenarios = new (int rocks, float rate, int enemies, bool effects, bool steep, bool noGui)[]
             {
-                (100, 0f, 0, false), (300, 0f, 0, false), (600, 0f, 0, false),
-                (300, 0f, 20, false), (300, 0f, 20, true), (600, 0f, 20, true),
-                (0, 200f, 20, true),
+                (100, 0f, 0, false, false, false), (300, 0f, 0, false, false, false), (600, 0f, 0, false, false, false),
+                (300, 0f, 20, false, false, false), (300, 0f, 20, true, false, false), (600, 0f, 20, true, false, false),
+                (0, 200f, 20, true, false, false),
+                (600, 0f, 20, true, true, false),
+                (600, 0f, 20, true, true, true),
             };
             var samples = new float[20000];
+            var gui = new List<Behaviour>();
+            foreach (var mb in FindObjectsByType<MonoBehaviour>())
+                if (mb is Crosshair || mb is HeartsHUD || mb is DeathScreen || mb is DebugPanel) gui.Add(mb);
             foreach (var s in scenarios)
             {
                 keepRocksAlive = s.rocks;
                 rocksPerSecond = s.rate;
                 enemyCount = s.enemies;
                 homingAndBurn = s.effects;
+                aimPitch = s.steep ? 80f : 45f;
+                spreadDegrees = s.steep ? 15f : 60f;
+                foreach (var g in gui) g.enabled = !s.noGui;
                 yield return new WaitForSecondsRealtime(rockLifetime + 1.5f);
 
                 int frames = 0;
@@ -311,7 +324,7 @@ namespace WhiteDragon
                     sumBatches += Batches;
                     sumRocks += Projectile.LiveCount;
                     sumEnemies += ActiveEnemies();
-                    sumBursts += GameFeel.BurstsAlive;
+                    sumBursts += GameFeel.ParticlesAlive;
                     sumNumbers += DamageNumber.LiveCount;
                     for (int m = 0; m < breakdown.Length; m++)
                     {
@@ -330,15 +343,18 @@ namespace WhiteDragon
                 int over33 = 0;
                 for (int i = 0; i < Mathf.Min(frames, samples.Length); i++) if (samples[i] > 33.3f) over33++;
                 string line =
-                    $"[Stress] {(s.rate > 0f ? $"fire {s.rate:0}/s" : $"keep {s.rocks,3} alive")} enemies={s.enemies,2} homing+burn={(s.effects ? "yes" : "no ")} | " +
+                    $"[Stress] {(s.rate > 0f ? $"fire {s.rate:0}/s" : $"keep {s.rocks,3} alive")} enemies={s.enemies,2} homing+burn={(s.effects ? "yes" : "no ")}{(s.steep ? " aimed up" : "")}{(s.noGui ? " OnGUI off" : "")} | " +
                     $"live rocks {sumRocks / frames:0} enemies {sumEnemies / frames:0} | avg {avg:0.00} ms ({1000f / avg:0} fps) " +
                     $"worst {worst:0.00} ms, >33ms: {over33} | main thread {sumMain / frames:0.00} ms | scripts {sumScript / frames:0.00} ms | " +
                     $"GC {sumGc / frames:0} B/frame | frames {frames}\n" +
-                    $"[Stress]     per frame:{parts} | bursts alive {sumBursts / frames:0}, damage numbers alive {sumNumbers / frames:0}";
+                    $"[Stress]     per frame:{parts} | burst particles alive {sumBursts / frames:0}, damage numbers alive {sumNumbers / frames:0}, recycled by cap {Projectile.RecycledByCap}";
                 Debug.Log(line);
                 sb.AppendLine(line);
             }
             StopAll();
+            aimPitch = 45f;
+            spreadDegrees = 60f;
+            foreach (var g in gui) if (g != null) g.enabled = true;
             yield return new WaitForSecondsRealtime(rockLifetime + 0.5f);
             LastReport = sb.ToString();
             SuiteRunning = false;
@@ -350,7 +366,7 @@ namespace WhiteDragon
         {
             GUILayout.Label($"Frame avg {AverageMs:0.00} ms ({(AverageMs > 0f ? 1000f / AverageMs : 0f):0} fps), worst {WorstMs:0.00} ms (last {Window})");
             GUILayout.Label($"Main thread {MainThreadMs:0.00} ms, scripts {ScriptMs:0.00} ms, GC {GcBytes} B/frame, batches {Batches}");
-            GUILayout.Label($"Live: rocks {Projectile.LiveCount}, damage numbers {DamageNumber.LiveCount}, bursts {GameFeel.BurstsAlive}, active enemies {ActiveEnemies()}");
+            GUILayout.Label($"Live: rocks {Projectile.LiveCount}, damage numbers {DamageNumber.LiveCount}, burst particles {GameFeel.ParticlesAlive}, active enemies {ActiveEnemies()}, recycled by cap {Projectile.RecycledByCap}");
 
             GUILayout.Label($"Rocks per second: {rocksPerSecond:0}   (or keep alive: {keepRocksAlive})");
             rocksPerSecond = Mathf.Round(GUILayout.HorizontalSlider(rocksPerSecond, 0f, 400f));

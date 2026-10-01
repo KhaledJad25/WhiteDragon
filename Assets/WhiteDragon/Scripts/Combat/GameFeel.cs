@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace WhiteDragon
@@ -5,36 +6,42 @@ namespace WhiteDragon
     /// <summary>
     /// Hit-stop, trauma camera shake, particle bursts and code-generated placeholder sounds.
     /// Creates itself on first use. All randomness here is cosmetic.
+    /// Bursts come from one shared particle system (no object per hit); hit-stop, sounds and the
+    /// number of particles, damage numbers and live projectiles are capped (see GameFeelSettings).
     /// </summary>
     public class GameFeel : MonoBehaviour
     {
         public static float ShakeScale = 1f;
         public static float HitStopScale = 1f;
         public static float SoundVolume = 0.6f;
+        /// <summary>Scales the caps below. Hook for a future settings menu.</summary>
+        public static EffectsQuality Quality = EffectsQuality.High;
+
+        public const int DefaultMaxDamageNumbers = 60;
+        public const int DefaultMaxParticles = 2000;
+        public const int DefaultMaxProjectiles = 1000;
+        public const float DefaultSoundCooldown = 0.03f;
 
         const float SlowTimeScale = 0.05f;
         const float TraumaDecay = 1.5f;
         const float MaxShakeAngle = 3f;
 
         static GameFeel instance;
-        static readonly System.Collections.Generic.Dictionary<GameSound, AudioClip> generated =
-            new System.Collections.Generic.Dictionary<GameSound, AudioClip>();
-        static readonly System.Collections.Generic.Queue<float> burstExpiry = new System.Collections.Generic.Queue<float>();
+        static readonly Dictionary<GameSound, AudioClip> generated = new Dictionary<GameSound, AudioClip>();
+        static readonly Queue<float> prefabExpiry = new Queue<float>();
+        static readonly float[] lastSoundTime = NewSoundTimers();
 
-        /// <summary>Particle bursts still alive (debug/stress readout only).</summary>
-        public static int BurstsAlive
+        static float[] NewSoundTimers()
         {
-            get
-            {
-                while (burstExpiry.Count > 0 && burstExpiry.Peek() <= Time.time) burstExpiry.Dequeue();
-                return burstExpiry.Count;
-            }
+            var t = new float[System.Enum.GetValues(typeof(GameSound)).Length];
+            for (int i = 0; i < t.Length; i++) t[i] = float.NegativeInfinity;
+            return t;
         }
+        static readonly HitStopGate hitStop = new HitStopGate();
 
         AudioSource audioSource;
+        ParticleSystem bursts;
         float trauma;
-        float hitStopUntil;
-        bool hitStopActive;
         Transform shakenCamera;
 
         static GameFeel Instance
@@ -48,6 +55,28 @@ namespace WhiteDragon
                     instance = go.AddComponent<GameFeel>();
                 }
                 return instance;
+            }
+        }
+
+        // ---- Caps (scaled by Quality) ----
+
+        public static float QualityScale(EffectsQuality quality) =>
+            quality == EffectsQuality.Low ? 0.25f : quality == EffectsQuality.Medium ? 0.5f : 1f;
+
+        static int Scaled(int baseValue) => Mathf.Max(1, Mathf.RoundToInt(baseValue * QualityScale(Quality)));
+
+        public static int MaxDamageNumbers => Scaled(Settings != null ? Settings.maxDamageNumbers : DefaultMaxDamageNumbers);
+        public static int MaxParticles => Scaled(Settings != null ? Settings.maxParticles : DefaultMaxParticles);
+        public static int MaxProjectiles => Scaled(Settings != null ? Settings.maxProjectiles : DefaultMaxProjectiles);
+
+        /// <summary>Burst particles plus prefab effects alive (debug/stress readout only).</summary>
+        public static int ParticlesAlive
+        {
+            get
+            {
+                while (prefabExpiry.Count > 0 && prefabExpiry.Peek() <= Time.time) prefabExpiry.Dequeue();
+                int fromBursts = instance != null && instance.bursts != null ? instance.bursts.particleCount : 0;
+                return fromBursts + prefabExpiry.Count;
             }
         }
 
@@ -104,13 +133,29 @@ namespace WhiteDragon
             return configured != null ? configured : Generated(sound);
         }
 
-        /// <summary>Copies the strength values from a settings asset. null keeps the current values.</summary>
+        /// <summary>Copies strengths, limits and quality from a settings asset. null keeps the current values.</summary>
         public static void ApplySettings(GameFeelSettings settings)
         {
             if (settings == null) return;
             ShakeScale = settings.shakeScale;
             HitStopScale = settings.hitStopScale;
             SoundVolume = settings.soundVolume;
+            Quality = settings.quality;
+            hitStop.MaxDuration = settings.hitStopMaxDuration;
+            hitStop.Cooldown = settings.hitStopCooldown;
+        }
+
+        /// <summary>
+        /// True if this sound may play now (at most once per sound cooldown), and records it.
+        /// Stops dozens of identical one-shots stacking in the same instant.
+        /// </summary>
+        public static bool TryClaimSound(GameSound sound, float now)
+        {
+            float cooldown = Settings != null ? Settings.soundCooldown : DefaultSoundCooldown;
+            int i = (int)sound;
+            if (now - lastSoundTime[i] < cooldown) return false;
+            lastSoundTime[i] = now;
+            return true;
         }
 
         static void Particles(GameObject prefab, Vector3 point, Color color, int count, float speed)
@@ -120,8 +165,9 @@ namespace WhiteDragon
                 Burst(point, color, count, speed);
                 return;
             }
+            if (ParticlesAlive >= MaxParticles) return;
             Destroy(Instantiate(prefab, point, Quaternion.identity), Settings.particleLifetime);
-            burstExpiry.Enqueue(Time.time + Settings.particleLifetime);
+            prefabExpiry.Enqueue(Time.time + Settings.particleLifetime);
         }
 
         // ---- Building blocks ----
@@ -130,10 +176,8 @@ namespace WhiteDragon
         {
             if (!Application.isPlaying) return;
             if (HitStopScale <= 0f || seconds <= 0f) return;
-            var i = Instance;
-            i.hitStopUntil = Mathf.Max(i.hitStopUntil, Time.unscaledTime + seconds * HitStopScale);
-            i.hitStopActive = true;
-            Time.timeScale = SlowTimeScale;
+            _ = Instance; // its Update ends the stop
+            if (hitStop.Request(Time.unscaledTime, seconds * HitStopScale)) Time.timeScale = SlowTimeScale;
         }
 
         public static void Shake(float amount)
@@ -143,40 +187,29 @@ namespace WhiteDragon
             i.trauma = Mathf.Clamp01(i.trauma + amount * ShakeScale);
         }
 
+        /// <summary>Emits count particles at position from the shared burst system (capped by MaxParticles).</summary>
         public static void Burst(Vector3 position, Color color, int count, float speed)
         {
             if (!Application.isPlaying) return;
-            var go = new GameObject("Burst");
-            go.transform.position = position;
-            var ps = go.AddComponent<ParticleSystem>();
-            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-
+            var ps = Instance.bursts;
             var main = ps.main;
-            main.duration = 0.5f;
-            main.loop = false;
-            main.playOnAwake = false;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.25f, 0.6f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(speed * 0.4f, speed);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.05f, 0.15f);
-            main.startColor = color;
-            main.gravityModifier = 1.5f;
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-            var emission = ps.emission;
-            emission.enabled = false;
-            var shape = ps.shape;
-            shape.shapeType = ParticleSystemShapeType.Sphere;
-            shape.radius = 0.05f;
-            go.GetComponent<ParticleSystemRenderer>().sharedMaterial = PlaceholderMaterials.Particle();
-
-            ps.Emit(count);
-            Destroy(go, 1.5f);
-            burstExpiry.Enqueue(Time.time + 1.5f);
+            main.maxParticles = MaxParticles;
+            var p = new ParticleSystem.EmitParams { startColor = color, applyShapeToPosition = false };
+            for (int n = 0; n < count; n++)
+            {
+                Vector3 dir = Random.onUnitSphere;
+                p.position = position + dir * (0.05f * Random.value);
+                p.velocity = dir * Random.Range(speed * 0.4f, speed);
+                p.startSize = Random.Range(0.05f, 0.15f);
+                p.startLifetime = Random.Range(0.25f, 0.6f);
+                ps.Emit(p, 1);
+            }
         }
 
         void Play(GameSound sound, float volume)
         {
             var clip = ClipFor(sound);
-            if (SoundVolume <= 0f || clip == null) return;
+            if (SoundVolume <= 0f || clip == null || !TryClaimSound(sound, Time.unscaledTime)) return;
             audioSource.pitch = Random.Range(0.9f, 1.1f);
             audioSource.PlayOneShot(clip, volume * SoundVolume);
         }
@@ -187,6 +220,29 @@ namespace WhiteDragon
         {
             audioSource = gameObject.AddComponent<AudioSource>();
             audioSource.playOnAwake = false;
+            bursts = CreateBurstSystem(transform);
+        }
+
+        static ParticleSystem CreateBurstSystem(Transform parent)
+        {
+            var go = new GameObject("Bursts");
+            go.transform.SetParent(parent, false);
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.duration = 1f;
+            main.loop = true;
+            main.playOnAwake = false;
+            main.gravityModifier = 1.5f;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = MaxParticles;
+            var emission = ps.emission;
+            emission.enabled = false;
+            var shape = ps.shape;
+            shape.enabled = false;
+            go.GetComponent<ParticleSystemRenderer>().sharedMaterial = PlaceholderMaterials.Particle();
+            ps.Play();
+            return ps;
         }
 
         /// <summary>The code-generated placeholder clip for a sound (created once).</summary>
@@ -208,11 +264,7 @@ namespace WhiteDragon
 
         void Update()
         {
-            if (hitStopActive && Time.unscaledTime >= hitStopUntil)
-            {
-                hitStopActive = false;
-                Time.timeScale = 1f;
-            }
+            if (hitStop.Update(Time.unscaledTime)) Time.timeScale = 1f;
         }
 
         void LateUpdate()
@@ -234,7 +286,7 @@ namespace WhiteDragon
 
         void OnDestroy()
         {
-            if (hitStopActive) Time.timeScale = 1f;
+            if (hitStop.Active) Time.timeScale = 1f;
         }
 
         static float Noise() => Random.value * 2f - 1f;
@@ -257,9 +309,20 @@ namespace WhiteDragon
             ShakeScale = 1f;
             HitStopScale = 1f;
             SoundVolume = 0.6f;
+            Quality = EffectsQuality.High;
             Time.timeScale = 1f;
             generated.Clear();
-            burstExpiry.Clear();
+            prefabExpiry.Clear();
+            ResetSoundTimers();
+            hitStop.MaxDuration = 0.15f;
+            hitStop.Cooldown = 0.1f;
+            hitStop.Reset();
+        }
+
+        /// <summary>Forget when each sound last played (also used by tests).</summary>
+        public static void ResetSoundTimers()
+        {
+            for (int i = 0; i < lastSoundTime.Length; i++) lastSoundTime[i] = float.NegativeInfinity;
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]

@@ -153,7 +153,9 @@ namespace WhiteDragon
             var visual = p.transform.Find("Visual");
             Assert.IsNotNull(visual.GetComponent<MeshFilter>());
             Assert.AreEqual(Projectile.BaseRadius * 2f, visual.localScale.x, 1e-5f);
-            Assert.AreEqual(DamageTypeColors.Tint(DamageType.Fire), BlockColor(visual.GetComponent<Renderer>()));
+            var renderer = visual.GetComponent<Renderer>();
+            Assert.AreEqual(DamageTypeColors.Tint(DamageType.Fire), renderer.sharedMaterial.color, "shared material per damage type");
+            Assert.IsFalse(renderer.HasPropertyBlock(), "no property block on rocks, so they batch");
         }
 
         [Test]

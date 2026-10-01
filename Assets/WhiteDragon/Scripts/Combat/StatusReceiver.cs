@@ -87,9 +87,10 @@ namespace WhiteDragon
         public void Tick(float dt)
         {
             if (damageable == null) damageable = GetComponent<IDamageable>();
-            foreach (var a in active.ToArray())
+            // Index loop (no per-frame copy). Damage can clear the list (death), so re-check as we go.
+            for (int i = 0; i < active.Count; i++)
             {
-                if (!active.Contains(a)) continue;
+                var a = active[i];
                 var def = a.Definition;
                 float step = Mathf.Min(dt, a.Remaining);
                 a.Remaining -= dt;
@@ -104,11 +105,15 @@ namespace WhiteDragon
                         float damage = def.damagePerSecond * interval * a.Stacks;
                         Vector3 point = transform.position + Vector3.up;
                         damageable.TakeDamage(damage, point);
-                        DamageNumber.Spawn(point, damage, def.tint);
+                        DamageNumber.Spawn(point, damage, def.tint, this);
                     }
                 }
 
-                if (a.Remaining <= 0f && active.Contains(a)) Remove(a);
+                if (a.Remaining <= 0f && active.Contains(a))
+                {
+                    Remove(a);
+                    i--;
+                }
             }
         }
 

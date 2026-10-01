@@ -43,6 +43,28 @@ namespace WhiteDragon
         [Range(0f, 1f)]
         public float soundVolume = 0.6f;
 
+        [Header("Limits (performance)")]
+        [Tooltip("Low / Medium / High scale the caps below by 0.25 / 0.5 / 1. Hook for a future settings menu.")]
+        public EffectsQuality quality = EffectsQuality.High;
+        [Tooltip("Most damage numbers on screen at once (at High). Extra hits on the same target within a short window add to its number.")]
+        [Min(1)]
+        public int maxDamageNumbers = GameFeel.DefaultMaxDamageNumbers;
+        [Tooltip("Most burst particles alive at once (at High).")]
+        [Min(1)]
+        public int maxParticles = GameFeel.DefaultMaxParticles;
+        [Tooltip("Most live rocks at once (at High). When reached, the oldest rock is recycled.")]
+        [Min(1)]
+        public int maxProjectiles = GameFeel.DefaultMaxProjectiles;
+        [Tooltip("The same sound cannot play again within this many seconds (stops dozens of hits stacking).")]
+        [Min(0f)]
+        public float soundCooldown = GameFeel.DefaultSoundCooldown;
+        [Tooltip("Longest a single hit-stop can last, even when hits keep extending it (seconds).")]
+        [Min(0f)]
+        public float hitStopMaxDuration = 0.15f;
+        [Tooltip("After a hit-stop ends, no new one can start for this long (seconds), so constant hits never lock the game in slow motion.")]
+        [Min(0f)]
+        public float hitStopCooldown = 0.1f;
+
         static GameFeelSettings current;
         static bool loaded;
 

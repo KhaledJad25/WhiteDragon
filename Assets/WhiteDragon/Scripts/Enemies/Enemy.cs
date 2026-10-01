@@ -81,7 +81,12 @@ namespace WhiteDragon
         }
 
         /// <summary>Dormant enemies stand still until their room activates them.</summary>
-        public void SetDormant(bool value) => dormant = value;
+        public void SetDormant(bool value)
+        {
+            dormant = value;
+            // Dormant (room not entered) and dead enemies run no Update at all.
+            enabled = !dormant && !dead;
+        }
 
         /// <summary>Chase this player instead of searching the scene for one.</summary>
         public void SetTarget(PlayerHealth player)
@@ -158,6 +163,7 @@ namespace WhiteDragon
             Initialize();
             if (dead) return;
             dead = true;
+            enabled = false;
             health = 0f;
             statuses.ClearAll();
             events.Raise(ActorState.Die);
