@@ -33,6 +33,15 @@ namespace WhiteDragon
         public float GravityScale { get; set; } = 1f;
         public bool IsDespawned => despawned;
 
+        /// <summary>Projectiles alive in play mode (debug/stress readout only).</summary>
+        public static int LiveCount { get; private set; }
+
+        void Awake() => LiveCount++;
+        void OnDestroy() => LiveCount--;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => LiveCount = 0;
+
         public static Projectile Spawn(ShotRecipe recipe, Vector3 position, Vector3 direction, Transform owner)
         {
             var go = new GameObject("Rock");

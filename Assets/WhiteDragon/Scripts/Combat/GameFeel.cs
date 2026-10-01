@@ -19,6 +19,17 @@ namespace WhiteDragon
         static GameFeel instance;
         static readonly System.Collections.Generic.Dictionary<GameSound, AudioClip> generated =
             new System.Collections.Generic.Dictionary<GameSound, AudioClip>();
+        static readonly System.Collections.Generic.Queue<float> burstExpiry = new System.Collections.Generic.Queue<float>();
+
+        /// <summary>Particle bursts still alive (debug/stress readout only).</summary>
+        public static int BurstsAlive
+        {
+            get
+            {
+                while (burstExpiry.Count > 0 && burstExpiry.Peek() <= Time.time) burstExpiry.Dequeue();
+                return burstExpiry.Count;
+            }
+        }
 
         AudioSource audioSource;
         float trauma;
@@ -110,6 +121,7 @@ namespace WhiteDragon
                 return;
             }
             Destroy(Instantiate(prefab, point, Quaternion.identity), Settings.particleLifetime);
+            burstExpiry.Enqueue(Time.time + Settings.particleLifetime);
         }
 
         // ---- Building blocks ----
@@ -158,6 +170,7 @@ namespace WhiteDragon
 
             ps.Emit(count);
             Destroy(go, 1.5f);
+            burstExpiry.Enqueue(Time.time + 1.5f);
         }
 
         void Play(GameSound sound, float volume)
@@ -246,6 +259,7 @@ namespace WhiteDragon
             SoundVolume = 0.6f;
             Time.timeScale = 1f;
             generated.Clear();
+            burstExpiry.Clear();
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]

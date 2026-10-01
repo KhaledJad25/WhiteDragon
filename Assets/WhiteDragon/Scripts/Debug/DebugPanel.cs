@@ -44,6 +44,8 @@ namespace WhiteDragon
             statuses = Resources.LoadAll<StatusEffectDefinition>("Statuses")
                 .OrderBy(s => s.id ?? "", StringComparer.Ordinal).ToArray();
             poolCounts = ItemCatalog.CountByPool();
+            if (GetComponent<StressTest>() == null) gameObject.AddComponent<StressTest>();
+            if (GetComponent<FrameRateCheck>() == null) gameObject.AddComponent<FrameRateCheck>();
         }
 
         void OnEnable()
@@ -138,6 +140,7 @@ namespace WhiteDragon
 
             GUILayout.Label("DEBUG (F1 to close)", headerStyle);
             DrawRun();
+            DrawStress();
             DrawStats();
             DrawRecipe();
             DrawItems();
@@ -261,6 +264,14 @@ namespace WhiteDragon
                 GUILayout.EndHorizontal();
             }
             GUILayout.EndScrollView();
+        }
+
+        void DrawStress()
+        {
+            var stress = GetComponent<StressTest>();
+            if (stress == null || !stress.enabled) return;
+            Header("Stress test / performance");
+            stress.DrawGui();
         }
 
         void Header(string text) => GUILayout.Label(text, headerStyle);

@@ -43,6 +43,17 @@ namespace WhiteDragon
 
         Color Tint => definition != null ? definition.tint : Color.grey;
 
+        static readonly System.Collections.Generic.List<Enemy> live = new System.Collections.Generic.List<Enemy>();
+
+        /// <summary>Enabled enemies (debug/stress readout only).</summary>
+        public static System.Collections.Generic.IReadOnlyList<Enemy> Live => live;
+
+        void OnEnable() => live.Add(this);
+        void OnDisable() => live.Remove(this);
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => live.Clear();
+
         void Awake() => Initialize();
 
         public void Initialize()

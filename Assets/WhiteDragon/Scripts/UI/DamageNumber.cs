@@ -13,6 +13,15 @@ namespace WhiteDragon
         Vector3 drift;
         float age;
 
+        /// <summary>Damage numbers alive (debug/stress readout only).</summary>
+        public static int LiveCount { get; private set; }
+
+        void Awake() => LiveCount++;
+        void OnDestroy() => LiveCount--;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => LiveCount = 0;
+
         public static void Spawn(Vector3 position, float amount, Color color)
         {
             if (!Application.isPlaying) return;
