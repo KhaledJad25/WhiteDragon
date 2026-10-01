@@ -136,6 +136,7 @@ namespace WhiteDragon
                 search = GUILayout.TextField(search, EditorStyles.toolbarSearchField, GUILayout.MinWidth(120f));
                 if (GUILayout.Button("New", EditorStyles.toolbarButton, GUILayout.Width(50f))) CreateNew();
                 if (GUILayout.Button("Refresh", EditorStyles.toolbarButton, GUILayout.Width(60f))) Reload();
+                if (GUILayout.Button("Validate", EditorStyles.toolbarButton, GUILayout.Width(60f))) ContentValidator.Run();
             }
 
             if (tab == Tab.Items)
