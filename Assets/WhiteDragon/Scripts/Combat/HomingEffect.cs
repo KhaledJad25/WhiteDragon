@@ -6,13 +6,21 @@ namespace WhiteDragon
     [CreateAssetMenu(menuName = "WhiteDragon/Effects/Homing", fileName = "Homing")]
     public class HomingEffect : ShotEffect
     {
-        [Tooltip("Degrees per second, multiplied by stacks.")]
+        [Header("Homing")]
+        [Tooltip("How fast rocks turn, in degrees per second. Multiplied by stacks: two sources turn twice as fast.")]
+        [Min(0f)]
         public float turnRateDegrees = 180f;
-        [Tooltip("Half-angle of the search cone in degrees.")]
+        [Tooltip("Rocks only chase targets within this many degrees of their flight direction. 45 = a 90 degree cone.")]
+        [Range(0f, 180f)]
         public float coneHalfAngle = 45f;
+        [Tooltip("How far away (meters) a rock looks for targets.")]
+        [Min(0f)]
         public float searchRadius = 15f;
+        [Tooltip("Seconds between target searches. Lower = snappier, slightly more cost.")]
+        [Min(0.02f)]
         public float retargetInterval = 0.1f;
-        [Tooltip("Gravity multiplier while a target is locked.")]
+        [Tooltip("Gravity multiplier while a target is locked. 0 = flies straight, 1 = normal arc.")]
+        [Range(0f, 1f)]
         public float gravityScaleWhileHoming = 0.2f;
 
         class State

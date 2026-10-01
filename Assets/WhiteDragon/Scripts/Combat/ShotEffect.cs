@@ -9,6 +9,7 @@ namespace WhiteDragon
     /// </summary>
     public abstract class ShotEffect : ScriptableObject
     {
+        [Tooltip("What this effect asset does, in one short line (for tools and other developers).")]
         [TextArea] public string description;
 
         /// <summary>Called once per throw before clamping. stacks = how many sources carry this effect.</summary>

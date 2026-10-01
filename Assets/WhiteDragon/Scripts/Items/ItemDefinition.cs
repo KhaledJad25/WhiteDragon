@@ -8,22 +8,33 @@ namespace WhiteDragon
     [CreateAssetMenu(menuName = "WhiteDragon/Item", fileName = "Item")]
     public class ItemDefinition : ScriptableObject
     {
+        [Header("Identity")]
+        [Tooltip("Unique lowercase id, e.g. \"iron_tooth\". Never change it once the item is in use.")]
         public string id;
+        [Tooltip("Name shown to the player on the pedestal.")]
         public string displayName;
+        [Tooltip("Short line shown under the name on the pedestal.")]
         [TextArea] public string description;
+        [Tooltip("Lowercase words that synergies count, e.g. \"rock\", \"fire\". Several items sharing a tag can trigger a synergy.")]
         public string[] tags = new string[0];
 
         [Header("Effects")]
+        [Tooltip("Stat changes while held. Flat adds, PercentAdd adds percent (0.25 = +25%), Multiply multiplies (1.5 = x1.5).")]
         public StatModifier[] statModifiers = new StatModifier[0];
+        [Tooltip("Changes to every throw: extra rocks, spread, pierce, size, damage type.")]
         public RecipeEdits recipeEdits = RecipeEdits.Default;
+        [Tooltip("Shot effect assets (homing, burn, split...). Drag them from Data/Resources/Effects. No empty slots.")]
         public List<ShotEffect> effects = new List<ShotEffect>();
 
         [Header("Pools")]
+        [Tooltip("Rarer tiers appear less often; Luck makes them more likely.")]
         public ItemRarity rarity = ItemRarity.Common;
         [Tooltip("Lowercase pool IDs, compared case-insensitively. Type a new one to make a new pool.")]
         public string[] poolIds = { "normal" };
+        [Tooltip("Higher = more common within its rarity. 0 = never appears. 1 = normal.")]
+        [Min(0f)]
         public float weightMultiplier = 1f;
-        [Tooltip("Empty means always available.")]
+        [Tooltip("Empty means always available. Otherwise the item can only appear after this hidden unlock.")]
         public string requiredUnlockId = "";
 
         /// <summary>One line describing what the item does, for tools and debugging.</summary>

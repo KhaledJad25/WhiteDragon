@@ -6,10 +6,21 @@ namespace WhiteDragon
     [CreateAssetMenu(menuName = "WhiteDragon/Effects/Split On Hit", fileName = "SplitOnHit")]
     public class SplitOnHitEffect : ShotEffect
     {
+        [Header("Fragments")]
+        [Tooltip("Fragments per hit for each source of this effect.")]
+        [Min(1)]
         public int fragmentsPerStack = 2;
+        [Tooltip("Fan width of the fragments, in degrees.")]
+        [Range(0f, 180f)]
         public float spreadDegrees = 60f;
+        [Tooltip("Fragment damage as a share of the rock's damage. 0.5 = half.")]
+        [Range(0f, 2f)]
         public float damageFraction = 0.5f;
+        [Tooltip("Fragment size as a share of the rock's size.")]
+        [Range(0.1f, 2f)]
         public float sizeFraction = 0.6f;
+        [Tooltip("Fragment range as a share of the rock's range.")]
+        [Range(0.05f, 1f)]
         public float rangeFraction = 0.4f;
 
         public override void OnHit(ShotEffectInstance shot, IDamageable target, Vector3 point)
