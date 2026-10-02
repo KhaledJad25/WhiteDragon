@@ -116,3 +116,7 @@ InitTestScene*.unity*
 # Third-party Asset Store content (not committed)
 /Assets/Toon_RTS/
 /Assets/Toon_RTS.meta
+
+# Profiler captures from the stress harness (-wdProfile)
+*.raw
+profile_*

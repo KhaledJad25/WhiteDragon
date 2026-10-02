@@ -104,6 +104,8 @@ namespace WhiteDragon
         {
             if (Array.IndexOf(Environment.GetCommandLineArgs(), "-wdStress") >= 0)
                 StartCoroutine(RunAll(quitAfter: true));
+            else if (Array.IndexOf(Environment.GetCommandLineArgs(), "-wdProfile") >= 0)
+                StartCoroutine(RunProfileCaptures(quitAfter: true));
         }
 
         void OnDestroy()
@@ -263,6 +265,43 @@ namespace WhiteDragon
                 File.WriteAllText(Path.Combine(Application.dataPath, "..", "wd_stress_results.txt"),
                     LastReport + "\n" + (check != null ? check.LastReport : ""));
             if (quitAfter && !Application.isEditor) Application.Quit();
+        }
+
+        /// <summary>
+        /// Records profiler captures (.raw, next to the exe) of the 100-rock case and the steady heavy case,
+        /// for loading in the Profiler window. Run with "-wdProfile".
+        /// </summary>
+        public IEnumerator RunProfileCaptures(bool quitAfter)
+        {
+            SetFrameCap(-1);
+            string dir = Path.Combine(Application.dataPath, "..");
+            yield return ProfileScenario(Path.Combine(dir, "profile_100rocks"), 100, 0, false, false, 3f);
+            yield return ProfileScenario(Path.Combine(dir, "profile_heavy"), 600, 20, true, true, 10f);
+            if (quitAfter && !Application.isEditor) Application.Quit();
+        }
+
+        IEnumerator ProfileScenario(string file, int rocks, int enemies, bool effects, bool steep, float seconds)
+        {
+            keepRocksAlive = rocks;
+            enemyCount = enemies;
+            homingAndBurn = effects;
+            aimPitch = steep ? 80f : 45f;
+            spreadDegrees = steep ? 15f : 60f;
+            yield return new WaitForSecondsRealtime(rockLifetime + 1.5f);
+
+            UnityEngine.Profiling.Profiler.maxUsedMemory = 512 * 1024 * 1024;
+            UnityEngine.Profiling.Profiler.logFile = file;
+            UnityEngine.Profiling.Profiler.enableBinaryLog = true;
+            UnityEngine.Profiling.Profiler.enabled = true;
+            yield return new WaitForSecondsRealtime(seconds);
+            UnityEngine.Profiling.Profiler.enabled = false;
+            UnityEngine.Profiling.Profiler.enableBinaryLog = false;
+            UnityEngine.Profiling.Profiler.logFile = "";
+
+            StopAll();
+            aimPitch = 45f;
+            spreadDegrees = 60f;
+            yield return new WaitForSecondsRealtime(rockLifetime + 0.5f);
         }
 
         public static string Hardware() =>
