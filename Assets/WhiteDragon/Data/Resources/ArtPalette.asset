@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca9a362d750866847889d2114fc4b206, type: 3}
+  m_Name: ArtPalette
+  m_EditorClassIdentifier: WhiteDragon.Runtime::WhiteDragon.ArtPalette
+  nearBlack: {r: 0.045, g: 0.043, b: 0.047, a: 1}
+  ashGrey: {r: 0.36, g: 0.35, b: 0.34, a: 1}
+  bone: {r: 0.62, g: 0.58, b: 0.5, a: 1}
+  bloodRed: {r: 0.55, g: 0.03, b: 0.03, a: 1}
+  emberOrange: {r: 0.7, g: 0.32, b: 0.1, a: 1}
+  sicklyGreen: {r: 0.38, g: 0.45, b: 0.25, a: 1}
+  bruisePurple: {r: 0.3, g: 0.18, b: 0.33, a: 1}
+  coldBlue: {r: 0.25, g: 0.32, b: 0.42, a: 1}
+  fogDensity: 0.036
+  ambient: {r: 0.055, g: 0.06, b: 0.075, a: 1}
+  sunColor: {r: 1, g: 0.84, b: 0.66, a: 1}
+  sunIntensity: 0.8
+  softShadows: 1
+  environmentSmoothness: 0.1
+  environment:
+  - material: {fileID: 2100000, guid: 3ec09e7e02f9a7948b2415a2f11da098, type: 2}
+    color: 1
+    brightness: 0.45
+  - material: {fileID: 2100000, guid: c074b23a7a2752b4585217adb885205b, type: 2}
+    color: 1
+    brightness: 0.85
+  - material: {fileID: 2100000, guid: 7f9ee7b9848cc88428489e9ee88b30e8, type: 2}
+    color: 4
+    brightness: 0.5
