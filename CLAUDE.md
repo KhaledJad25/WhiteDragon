@@ -60,6 +60,7 @@ Content must be EASY to add, change, and remove in the Unity Editor, by a human 
 - Gameplay must be frame-rate independent: results must not change between 30 and 60 fps (fire rate, burn damage, status duration, invincibility, homing, enemy speed). Carry leftover time forward for timers.
 - Avoid per-frame allocations in anything that runs every frame or per projectile. Pool frequently spawned objects.
 - Measure with the laptop plugged in, Windows power mode on Best performance, other heavy apps closed; discard the first run of each scenario as warm-up, then run 3 times and report the median and the min-max range. Never compare a single run against another single run.
+- Known and deferred: the extreme tier shows worst frames around 34 ms (Projectile.Update spikes) and the 100-rock scenario has a repeatable first-use hitch of about 12 ms; revisit once real enemies exist or if a realistic-tier number regresses.
 
 ## Art direction (locked)
 - Gritty dark fantasy, Berserk-inspired, low poly. Flat-shaded models, tiny point-filtered textures, a near-monochrome desaturated palette with blood red as the only strong accent, heavy fog, vignette, dark outlines; hatching or posterize on shadows later. Zero-cost art for now: free CC0 or clearly licensed assets, listed in LICENSES.txt. Third-party packs stay out of Git. Every art swap goes through the optional visual fields (prefabs, icons, sounds); never hard-code art.

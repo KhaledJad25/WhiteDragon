@@ -16,7 +16,8 @@ namespace WhiteDragon
         /// <summary>URP Lit material of this color. One shared material per color (SRP Batcher friendly).</summary>
         public static Material Lit(Color color)
         {
-            if (!lit.TryGetValue(color, out var m))
+            // m == null also catches a destroyed material (made in Play mode, which destroys it on exit).
+            if (!lit.TryGetValue(color, out var m) || m == null)
             {
                 // Instancing stays on as before; with no property block the SRP Batcher handles these.
                 m = new Material(Shaders().lit) { color = color, enableInstancing = true };
@@ -29,7 +30,7 @@ namespace WhiteDragon
         public static Material Emissive(Color color, float glow)
         {
             var key = (color, glow);
-            if (!emissive.TryGetValue(key, out var m))
+            if (!emissive.TryGetValue(key, out var m) || m == null)
             {
                 var template = RenderingDefaults.Current != null ? RenderingDefaults.Current.emissive : null;
                 if (template == null)
