@@ -4163,6 +4163,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: WhiteDragon.Runtime::WhiteDragon.LookRig
   palette: {fileID: 11400000, guid: 71927ddc89e97ea4cac653405f1a6ab5, type: 2}
   sun: {fileID: 1753626102}
+  outline: {fileID: -8299611729952169634, guid: 4855f50adc4e55346bff86a1547e6384, type: 2}
 --- !u!114 &1682956573
 MonoBehaviour:
   m_ObjectHideFlags: 0

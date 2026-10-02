@@ -49,6 +49,46 @@ namespace WhiteDragon
         }
 
         [Test]
+        public void ApplyToMaterials_EmissionGlowsInPaletteColor_AndZeroTurnsItOff()
+        {
+            var p = Track(ScriptableObject.CreateInstance<ArtPalette>());
+            var m = Track(new Material(RenderingDefaults.Current.lit));
+            var tint = new ArtPalette.MaterialTint { material = m, color = PaletteColor.BloodRed, emission = 0.5f };
+            p.environment.Add(tint);
+
+            p.ApplyToMaterials();
+            Assert.IsTrue(m.IsKeywordEnabled("_EMISSION"));
+            TestColors.AssertApprox(p.bloodRed * 0.5f, m.GetColor("_EmissionColor"));
+
+            tint.emission = 0f;
+            p.ApplyToMaterials();
+            Assert.IsFalse(m.IsKeywordEnabled("_EMISSION"));
+        }
+
+        [Test]
+        public void LookRig_LowQuality_TurnsOutlineOff_DisableTurnsItBackOn()
+        {
+            var feature = Track(ScriptableObject.CreateInstance<UnityEngine.Rendering.Universal.FullScreenPassRendererFeature>());
+            var go = Track(new GameObject("LookRigOutlineTest"));
+            go.SetActive(false);
+            var rig = go.AddComponent<LookRig>();
+            rig.palette = Track(ScriptableObject.CreateInstance<ArtPalette>());
+            rig.outline = feature;
+            go.SetActive(true);
+
+            rig.ApplyQuality(EffectsQuality.High);
+            Assert.IsTrue(feature.isActive);
+            rig.ApplyQuality(EffectsQuality.Low);
+            Assert.IsFalse(feature.isActive, "Low turns the outline off");
+            rig.ApplyQuality(EffectsQuality.Medium);
+            Assert.IsTrue(feature.isActive);
+
+            rig.ApplyQuality(EffectsQuality.Low);
+            go.SetActive(false);
+            Assert.IsTrue(feature.isActive, "never left off on the asset");
+        }
+
+        [Test]
         public void LookRig_AppliesFogAmbientAndSun()
         {
             bool fog = RenderSettings.fog;

@@ -30,6 +30,9 @@ namespace WhiteDragon
 
         public static bool Allowed => Application.isEditor || Debug.isDebugBuild;
 
+        // GPU frame time from FrameTimingManager (needs Player Settings > Frame Timing Stats; else "n/a").
+        static readonly FrameTiming[] frameTimings = new FrameTiming[1];
+
         public float AverageMs { get; private set; }
         public float WorstMs { get; private set; }
         public float ScriptMs { get; private set; }
@@ -102,6 +105,18 @@ namespace WhiteDragon
 
         void Start()
         {
+            // "-wdNoOutline": outline renderer feature off for this run, to measure what it costs.
+            if (Allowed && Array.IndexOf(Environment.GetCommandLineArgs(), "-wdNoOutline") >= 0)
+            {
+                var rig = FindAnyObjectByType<LookRig>();
+                if (rig != null && rig.outline != null)
+                {
+                    rig.outline.SetActive(false);
+                    Debug.Log($"[Stress] -wdNoOutline: outline feature active = {rig.outline.isActive}");
+                    rig.outline = null;
+                }
+                else Debug.LogWarning("[Stress] -wdNoOutline: no LookRig outline found");
+            }
             if (Array.IndexOf(Environment.GetCommandLineArgs(), "-wdStress") >= 0)
                 StartCoroutine(RunAll(quitAfter: true));
             else if (Array.IndexOf(Environment.GetCommandLineArgs(), "-wdProfile") >= 0)
@@ -345,7 +360,8 @@ namespace WhiteDragon
 
                 int frames = 0;
                 double sumMs = 0, sumScript = 0, sumGc = 0, sumMain = 0, sumBatches = 0, sumRocks = 0, sumEnemies = 0;
-                double sumBursts = 0, sumNumbers = 0;
+                double sumBursts = 0, sumNumbers = 0, sumGpu = 0;
+                int gpuFrames = 0;
                 var markerMs = new double[breakdown.Length];
                 var markerCalls = new double[breakdown.Length];
                 float worst = 0f;
@@ -366,6 +382,12 @@ namespace WhiteDragon
                     sumEnemies += ActiveEnemies();
                     sumBursts += GameFeel.ParticlesAlive;
                     sumNumbers += DamageNumber.LiveCount;
+                    FrameTimingManager.CaptureFrameTimings();
+                    if (FrameTimingManager.GetLatestTimings(1, frameTimings) > 0 && frameTimings[0].gpuFrameTime > 0)
+                    {
+                        sumGpu += frameTimings[0].gpuFrameTime;
+                        gpuFrames++;
+                    }
                     for (int m = 0; m < breakdown.Length; m++)
                     {
                         if (!breakdown[m].Valid || breakdown[m].Count == 0) continue;
@@ -386,7 +408,7 @@ namespace WhiteDragon
                     $"[Stress] {(s.rate > 0f ? $"fire {s.rate:0}/s" : $"keep {s.rocks,3} alive")} enemies={s.enemies,2} homing+burn={(s.effects ? "yes" : "no ")}{(s.steep ? " aimed up" : "")}{(s.noGui ? " OnGUI off" : "")} | " +
                     $"live rocks {sumRocks / frames:0} enemies {sumEnemies / frames:0} | avg {avg:0.00} ms ({1000f / avg:0} fps) " +
                     $"worst {worst:0.00} ms, >33ms: {over33} | main thread {sumMain / frames:0.00} ms | scripts {sumScript / frames:0.00} ms | " +
-                    $"GC {sumGc / frames:0} B/frame | frames {frames}\n" +
+                    $"gpu {(gpuFrames > 0 ? $"{sumGpu / gpuFrames:0.00} ms" : "n/a")} | GC {sumGc / frames:0} B/frame | frames {frames}\n" +
                     $"[Stress]     per frame:{parts} | burst particles alive {sumBursts / frames:0}, damage numbers alive {sumNumbers / frames:0}, recycled by cap {Projectile.RecycledByCap}";
                 Debug.Log(line);
                 sb.AppendLine(line);

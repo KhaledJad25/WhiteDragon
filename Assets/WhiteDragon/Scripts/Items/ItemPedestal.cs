@@ -125,7 +125,7 @@ namespace WhiteDragon
                 case ItemRarity.Uncommon: return new Color(0.25f, 0.75f, 0.3f);
                 case ItemRarity.Rare: return new Color(0.25f, 0.45f, 1f);
                 case ItemRarity.Legendary: return new Color(1f, 0.78f, 0.2f);
-                default: return new Color(0.6f, 0.6f, 0.6f);
+                default: return new Color(0.42f, 0.42f, 0.42f);
             }
         }
 

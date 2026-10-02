@@ -19,6 +19,8 @@ namespace WhiteDragon
             public PaletteColor color;
             [Tooltip("Multiplies the palette color (1 = as is).")]
             [Range(0f, 2f)] public float brightness = 1f;
+            [Tooltip("Glow in the same color (0 = none). Use for hazards that must read in shadow.")]
+            [Range(0f, 2f)] public float emission;
         }
 
         [Header("Palette (dark, desaturated; blood red is the only strong accent)")]
@@ -44,7 +46,7 @@ namespace WhiteDragon
         [Tooltip("Main light casts soft shadows (off = hard).")]
         public bool softShadows = true;
 
-        [Header("Environment materials (low smoothness, no specular)")]
+        [Header("Scene materials: environment and hazards (low smoothness, no specular, optional glow)")]
         [Range(0f, 1f)] public float environmentSmoothness = 0.1f;
         public List<MaterialTint> environment = new List<MaterialTint>();
 
@@ -89,7 +91,7 @@ namespace WhiteDragon
             return c;
         }
 
-        /// <summary>Writes palette colors, low smoothness and no specular into the environment materials (editor authoring).</summary>
+        /// <summary>Writes palette colors, low smoothness, no specular and the optional glow into the scene materials (editor authoring).</summary>
         public void ApplyToMaterials()
         {
             foreach (var t in environment)
@@ -102,6 +104,17 @@ namespace WhiteDragon
                 m.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
                 if (m.HasProperty("_EnvironmentReflections")) m.SetFloat("_EnvironmentReflections", 0f);
                 m.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
+                if (t.emission > 0f)
+                {
+                    m.EnableKeyword("_EMISSION");
+                    m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+                    m.SetColor("_EmissionColor", ColorOf(t.color) * t.emission);
+                }
+                else
+                {
+                    m.DisableKeyword("_EMISSION");
+                    m.SetColor("_EmissionColor", Color.black);
+                }
             }
         }
 

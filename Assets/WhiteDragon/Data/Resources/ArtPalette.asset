@@ -30,9 +30,16 @@ MonoBehaviour:
   - material: {fileID: 2100000, guid: 3ec09e7e02f9a7948b2415a2f11da098, type: 2}
     color: 1
     brightness: 0.45
+    emission: 0
   - material: {fileID: 2100000, guid: c074b23a7a2752b4585217adb885205b, type: 2}
     color: 1
     brightness: 0.85
+    emission: 0
   - material: {fileID: 2100000, guid: 7f9ee7b9848cc88428489e9ee88b30e8, type: 2}
     color: 4
     brightness: 0.5
+    emission: 0
+  - material: {fileID: 2100000, guid: 04f44b0979dff764abe09504b95715a4, type: 2}
+    color: 3
+    brightness: 1
+    emission: 1.4
