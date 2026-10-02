@@ -197,7 +197,7 @@ namespace WhiteDragon
                 if (!hitTargets.Add(target)) continue;
 
                 target.TakeDamage(recipe.Damage, point);
-                DamageNumber.Spawn(point, recipe.Damage, tint, target);
+                DamageNumber.Spawn(point, recipe.Damage, DamageTypeColors.NumberColor(recipe.DamageType), target);
                 GameFeel.OnHit(point, tint);
                 for (int i = 0; i < effectCount; i++)
                     effects[i].Effect.OnHit(effects[i], target, point);

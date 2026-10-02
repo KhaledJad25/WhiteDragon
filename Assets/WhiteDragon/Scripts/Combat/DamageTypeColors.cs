@@ -16,5 +16,9 @@ namespace WhiteDragon
                 default: return new Color(0.55f, 0.5f, 0.45f);
             }
         }
+
+        /// <summary>Damage number color per damage type: the tint, except Dark, whose tint is too dark to read as text.</summary>
+        public static Color NumberColor(DamageType type) =>
+            type == DamageType.Dark ? new Color(0.62f, 0.38f, 0.95f) : Tint(type);
     }
 }

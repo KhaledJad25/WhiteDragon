@@ -13,6 +13,9 @@ namespace WhiteDragon
         public Shader lit;
         [Tooltip("URP Particles/Unlit. Used for hit bursts.")]
         public Shader particles;
+        [Tooltip("URP Lit material with Emission on. Template for glowing placeholders (pedestal orbs); " +
+                 "being an asset keeps its emission shader variant in player builds.")]
+        public Material emissive;
 
         static RenderingDefaults current;
         static bool loaded;

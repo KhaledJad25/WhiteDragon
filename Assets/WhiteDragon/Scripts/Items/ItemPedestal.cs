@@ -19,6 +19,9 @@ namespace WhiteDragon
         [Tooltip("Minimum dot product between view direction and the item to count as looking at it.")]
         public float lookDot = 0.7f;
 
+        /// <summary>How strongly the placeholder orb glows in its rarity color, so it reads in shadow.</summary>
+        const float OrbGlow = 0.6f;
+
         static readonly List<ItemPedestal> enabledPedestals = new List<ItemPedestal>();
 
         ItemDefinition item;
@@ -94,7 +97,7 @@ namespace WhiteDragon
             else if (item != null)
             {
                 orbRenderer.gameObject.SetActive(true);
-                orbRenderer.sharedMaterial = PlaceholderMaterials.Lit(RarityColor(item.rarity));
+                orbRenderer.sharedMaterial = PlaceholderMaterials.Emissive(RarityColor(item.rarity), OrbGlow);
             }
             label.text = item == null ? "" : $"{item.displayName}\n{item.description}\nE: take";
             label.gameObject.SetActive(false);
