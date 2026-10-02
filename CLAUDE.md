@@ -13,10 +13,12 @@ Content must be EASY to add, change, and remove in the Unity Editor, by a human 
 - Content assets (ScriptableObjects) in Assets/WhiteDragon/Data/Resources/{Items,Synergies,Effects,Statuses,Enemies,Characters}.
 - Recipes for adding content: Assets/WhiteDragon/Docs/HOW_TO_EXTEND.txt. Read it before adding content, and keep it up to date.
 - Scene: Assets/WhiteDragon/Scenes/Sandbox.unity.
+- URP creates DefaultVolumeProfile.asset and UniversalRenderPipelineGlobalSettings.asset at the root of Assets; keep them there and commit them.
 - The old prototype was removed from the project and is kept at git tag prototype-v1. If an Assets/_Project folder or an Assets/Editor folder exists, ignore it and never edit it.
 
 ## Code rules
 
+- Pipeline: URP (Universal Render Pipeline). Never use Built-in-only shaders or APIs.
 - One main type per file. File name equals class name.
 - Enums (StatType, DamageType, ItemRarity, RandomStream) are append-only. Never reorder or renumber them.
 - Never rename, remove, or reorder serialized fields on existing assets. Add new fields at the end.

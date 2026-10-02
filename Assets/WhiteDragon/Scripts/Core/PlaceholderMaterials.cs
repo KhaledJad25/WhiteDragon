@@ -3,31 +3,40 @@ using UnityEngine;
 
 namespace WhiteDragon
 {
-    /// <summary>Cached flat-color placeholder materials created in code.</summary>
+    /// <summary>
+    /// Cached flat-color placeholder materials created in code (URP). Shaders come from the
+    /// RenderingDefaults asset in Resources, so player builds include them.
+    /// </summary>
     public static class PlaceholderMaterials
     {
         static readonly Dictionary<Color, Material> lit = new Dictionary<Color, Material>();
         static Material particle;
 
+        /// <summary>URP Lit material of this color. One shared material per color (SRP Batcher friendly).</summary>
         public static Material Lit(Color color)
         {
             if (!lit.TryGetValue(color, out var m))
             {
-                var shader = Shader.Find("Universal Render Pipeline/Lit")
-                             ?? Shader.Find("Standard")
-                             ?? Shader.Find("Sprites/Default");
-                // One shared material per color; instancing lets many rocks of one damage type draw together.
-                m = new Material(shader) { color = color, enableInstancing = true };
+                // Instancing stays on as before; with no property block the SRP Batcher handles these.
+                m = new Material(Shaders().lit) { color = color, enableInstancing = true };
                 lit[color] = m;
             }
             return m;
         }
 
-        /// <summary>Unlit vertex-colored material for particles.</summary>
+        /// <summary>URP Particles/Unlit material; particle colors come from vertex colors.</summary>
         public static Material Particle()
         {
-            if (particle == null) particle = new Material(Shader.Find("Sprites/Default"));
+            if (particle == null) particle = new Material(Shaders().particles);
             return particle;
+        }
+
+        static RenderingDefaults Shaders()
+        {
+            var d = RenderingDefaults.Current;
+            if (d == null || d.lit == null || d.particles == null)
+                Debug.LogError("[Rendering] Data/Resources/RenderingDefaults.asset is missing or incomplete; placeholder materials cannot be made.");
+            return d;
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
