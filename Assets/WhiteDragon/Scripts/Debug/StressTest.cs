@@ -324,7 +324,8 @@ namespace WhiteDragon
                 (100, 0f, 0, false, false, false), (300, 0f, 0, false, false, false), (600, 0f, 0, false, false, false),
                 (300, 0f, 20, false, false, false), (300, 0f, 20, true, false, false), (600, 0f, 20, true, false, false),
                 (0, 200f, 20, true, false, false),
-                (600, 0f, 20, true, true, false),
+                (150, 0f, 20, true, true, false), // realistic heavy tier
+                (600, 0f, 20, true, true, false), // extreme ceiling tier
                 (600, 0f, 20, true, true, true),
             };
             var samples = new float[20000];

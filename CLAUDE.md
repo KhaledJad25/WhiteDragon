@@ -53,9 +53,11 @@ Content must be EASY to add, change, and remove in the Unity Editor, by a human 
 ## Performance targets (locked)
 
 - Target 60 fps (16.7 ms per frame). 30 fps is the minimum the game must stay correct and playable at.
-- On the dev machine in a development build, the heaviest scene (600 live rocks, 20 active enemies, homing and burn active): average frame time under 8 ms, worst frame under 16.7 ms, game scripts under 3 ms, about zero garbage per frame.
+- Realistic heavy (about 150 live rocks, 20 enemies, homing and burn): average under 8 ms and no frame over 16.7 ms.
+- Extreme ceiling (600 live rocks, 20 enemies, homing and burn): average under 8 ms and no frame over 33 ms.
 - Gameplay must be frame-rate independent: results must not change between 30 and 60 fps (fire rate, burn damage, status duration, invincibility, homing, enemy speed). Carry leftover time forward for timers.
 - Avoid per-frame allocations in anything that runs every frame or per projectile. Pool frequently spawned objects.
+- Measure with the laptop plugged in, Windows power mode on Best performance, other heavy apps closed; discard the first run of each scenario as warm-up, then run 3 times and report the median and the min-max range. Never compare a single run against another single run.
 
 ## Art direction (locked)
 - Gritty dark fantasy, Berserk-inspired, low poly. Flat-shaded models, tiny point-filtered textures, a near-monochrome desaturated palette with blood red as the only strong accent, heavy fog, vignette, dark outlines; hatching or posterize on shadows later. Zero-cost art for now: free CC0 or clearly licensed assets, listed in LICENSES.txt. Third-party packs stay out of Git. Every art swap goes through the optional visual fields (prefabs, icons, sounds); never hard-code art.
