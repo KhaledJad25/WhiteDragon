@@ -120,3 +120,7 @@ InitTestScene*.unity*
 # Profiler captures from the stress harness (-wdProfile)
 *.raw
 profile_*
+
+# Our test files built on the Toon RTS pack (depend on the ignored pack above)
+/Assets/WhiteDragon/Art/ToonRTS/
+/Assets/WhiteDragon/Art/ToonRTS.meta
