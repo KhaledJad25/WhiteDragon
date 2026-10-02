@@ -61,7 +61,7 @@ namespace WhiteDragon
             Assert.AreEqual(Color.red, BlockColor(r), "flash over, back to base");
 
             tint.SetOverlay(Color.blue, 0.6f);
-            Assert.AreEqual(Color.Lerp(Color.red, Color.blue, 0.6f), BlockColor(r));
+            TestColors.AssertApprox(Color.Lerp(Color.red, Color.blue, 0.6f), BlockColor(r));
 
             tint.ClearAll();
             Assert.IsFalse(r.HasPropertyBlock(), "materials render untouched again");
@@ -154,7 +154,7 @@ namespace WhiteDragon
             Assert.IsNotNull(visual.GetComponent<MeshFilter>());
             Assert.AreEqual(Projectile.BaseRadius * 2f, visual.localScale.x, 1e-5f);
             var renderer = visual.GetComponent<Renderer>();
-            Assert.AreEqual(DamageTypeColors.Tint(DamageType.Fire), renderer.sharedMaterial.color, "shared material per damage type");
+            TestColors.AssertApprox(DamageTypeColors.Tint(DamageType.Fire), renderer.sharedMaterial.color, "shared material per damage type");
             Assert.IsFalse(renderer.HasPropertyBlock(), "no property block on rocks, so they batch");
         }
 

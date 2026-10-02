@@ -122,7 +122,7 @@ namespace WhiteDragon
             Assert.AreEqual(0, b.EffectCount, "no effects carried over");
             var visual = b.transform.Find("Visual");
             Assert.AreEqual(Projectile.BaseRadius * 2f, visual.localScale.x, 1e-5f, "size reset");
-            Assert.AreEqual(DamageTypeColors.Tint(DamageType.Physical), visual.GetComponent<Renderer>().sharedMaterial.color, "damage type color reset");
+            TestColors.AssertApprox(DamageTypeColors.Tint(DamageType.Physical), visual.GetComponent<Renderer>().sharedMaterial.color, "damage type color reset");
 
             for (int i = 0; i < 20 && !b.IsDespawned; i++) b.Tick(0.02f);
             Assert.AreEqual(1, target.Hits, "ignore list was cleared: the new rock hits the old ignored target");
@@ -200,6 +200,22 @@ namespace WhiteDragon
             Assert.IsFalse(b.IsShowing, "finished numbers go back to the pool");
             var d = DamageNumber.Spawn(Vector3.zero, 1f, Color.white, null);
             Assert.AreSame(b, d, "pooled number reused");
+        }
+
+        [Test]
+        public void DamageNumbers_ShowAuthoredColorInActiveColorSpace()
+        {
+            // TextMesh vertex colors are not converted in Linear, so the number must convert them itself.
+            DamageNumber.RunInEditMode = true;
+            Color fire = DamageTypeColors.Tint(DamageType.Fire);
+            Color expected = QualitySettings.activeColorSpace == ColorSpace.Linear ? fire.linear : fire;
+            var n = DamageNumber.Spawn(Vector3.zero, 3f, fire);
+            var tm = n.GetComponent<TextMesh>();
+            const float OneStep = 1f / 255f; // TextMesh stores colors as 8 bits per channel
+            Assert.That(tm.color.g, Is.EqualTo(expected.g).Within(OneStep), "on spawn");
+            n.Tick(0.1f);
+            Assert.That(tm.color.g, Is.EqualTo(expected.g).Within(OneStep), "while fading");
+            Assert.That(tm.color.a, Is.LessThan(1f), "alpha still fades");
         }
 
         // ---------- Hit-stop, sounds, quality ----------

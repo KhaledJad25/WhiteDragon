@@ -65,7 +65,7 @@ namespace WhiteDragon
             n.color = color;
             n.drift = new Vector3(Random.Range(-0.4f, 0.4f), 0f, 0f);
             n.text.text = Format(amount);
-            n.text.color = color;
+            TextMeshColor.Set(n.text, color);
             n.gameObject.SetActive(true);
             active.Add(n);
             return n;
@@ -123,7 +123,7 @@ namespace WhiteDragon
             var cam = Camera.main;
             if (cam != null) transform.rotation = cam.transform.rotation;
             color.a = Mathf.Clamp01(1f - age / Lifetime);
-            text.color = color;
+            TextMeshColor.Set(text, color);
             if (age >= Lifetime) Release();
         }
 

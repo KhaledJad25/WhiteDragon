@@ -54,6 +54,8 @@ Content must be EASY to add, change, and remove in the Unity Editor, by a human 
 
 - Target 60 fps (16.7 ms per frame). 30 fps is the minimum the game must stay correct and playable at.
 - Realistic heavy (about 150 live rocks, 20 enemies, homing and burn): average under 8 ms and no frame over 16.7 ms.
+  - Game scripts under 3 ms per frame.
+  - Gameplay code allocates about zero garbage per frame in steady state (IMGUI excluded).
 - Extreme ceiling (600 live rocks, 20 enemies, homing and burn): average under 8 ms and no frame over 33 ms.
 - Gameplay must be frame-rate independent: results must not change between 30 and 60 fps (fire rate, burn damage, status duration, invincibility, homing, enemy speed). Carry leftover time forward for timers.
 - Avoid per-frame allocations in anything that runs every frame or per projectile. Pool frequently spawned objects.

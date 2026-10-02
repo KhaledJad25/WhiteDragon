@@ -206,7 +206,7 @@ namespace WhiteDragon
             label.characterSize = 0.035f;
             label.anchor = TextAnchor.LowerCenter;
             label.alignment = TextAlignment.Center;
-            label.color = new Color(0.92f, 0.88f, 0.8f);
+            TextMeshColor.Set(label, new Color(0.92f, 0.88f, 0.8f));
             labelGo.SetActive(false);
         }
 
