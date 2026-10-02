@@ -89,9 +89,9 @@ EDITOR TOOLS (menu Tools/WhiteDragon)
 
 
 SWAPPING IN REAL ART (every slot is optional; empty = today's placeholder)
-Notes: the project uses the Built-in render pipeline. Store assets made for URP show pink: make a copy of
-the material under Assets/WhiteDragon/Art with the Standard shader and the same texture (never edit the
-store files). A spawned model's root is placed at zero on its socket, so put offsets on child objects.
+Notes: the project uses URP. Store assets made for the Built-in pipeline show pink: make a copy of the
+material under Assets/WhiteDragon/Art with the Universal Render Pipeline/Lit shader and the same texture
+(never edit the store files). A spawned model's root is placed at zero on its socket, so put offsets on child objects.
 Colliders on rock models are removed automatically. Example: Art/ToonRTS/UD_demo_character_WD.prefab.
 
 A. ENEMY MODEL
@@ -132,6 +132,42 @@ F. SOUNDS AND HIT PARTICLES
    3. hitParticles / killParticles / impactParticles: prefabs spawned at the point and removed after
       particleLifetime seconds; empty = generated burst.
    4. shakeScale, hitStopScale and soundVolume are the starting strengths (1, 1, 0.6 = today).
+
+
+CHANGING THE LOOK (no code; five places control it)
+Gameplay readability colors are NOT part of the look and live in code: rarity (ItemPedestal.RarityColor),
+damage types (DamageTypeColors), statuses (each status asset's tint), hit flash. Change them on purpose only.
+
+A. Data/Resources/ArtPalette.asset (applied by the LookRig object in Sandbox; other scenes need one too)
+   - Named colors: Near Black, Ash Grey, Bone, Blood Red (the only strong accent), Ember Orange,
+     Sickly Green, Bruise Purple, Cold Blue.
+   - Fog: fogDensity (exponential squared; 0.036 hides everything past about 60 m). Fog color is Near
+     Black, which is also the camera background. Off: fogDensity 0.
+   - Light: ambient (flat), sunColor, sunIntensity, softShadows (off = hard shadows).
+   - Scene materials: each entry = material + palette color + brightness + emission (glow). Today: floor,
+     stone, rust and the spike hazard (Blood Red, glow 1.4). Glow off: emission 0.
+   - Editing the asset in the Inspector re-applies it to the materials and the open scene; the button
+     "Apply to materials and scene" does the same.
+
+B. Settings/WhiteDragon_Look.asset (the Volume profile on Sandbox > LookRig)
+   - Vignette, Color Adjustments (saturation -30, contrast +20), Tonemapping (Neutral).
+   - One effect off: untick that override. All grading off: disable the Volume component on LookRig, or
+     untick Post Processing on the Main Camera.
+
+C. Settings/WhiteDragon_Outline.mat (outline look)
+   - Outline color (alpha = strength), thickness in pixels, depth and normal edge thresholds, fade-out
+     distance. Alpha 0 hides the outline but the pass still runs; use D to remove its cost.
+
+D. Settings/WhiteDragon_URP_Renderer.asset > Renderer Features > Outline (URP Full Screen Pass)
+   - Untick it to turn outlines off entirely, with no cost.
+
+E. Effects quality (Data/Resources/GameFeelSettings.asset > quality)
+   - Low turns the outline feature off at runtime (it also lowers the particle, damage-number and
+     live-rock caps).
+     Medium and High keep it on. The asset itself is never left switched off.
+
+Outline cost was measured on an NVIDIA GeForce GTX 1660 Ti at 1280x720: no measurable cost (below the
+~0.1 ms GPU-clock noise). It may cost more on weaker GPUs or at higher resolutions; use E or D there.
 
 
 RULES THAT KEEP CONTENT EASY TO CHANGE

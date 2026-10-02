@@ -1,0 +1,25 @@
+WHITEDRAGON - THIRD-PARTY ASSETS
+================================
+
+Every third-party asset used in the project is listed here with its source and license.
+Third-party packs stay out of Git (see .gitignore); only our own files that point to them are tracked.
+
+USED
+- Toon RTS Undead demo (folder Assets/Toon_RTS/unded_Demo; the pack has no readme naming its author)
+  Source: Unity Asset Store. License: Unity Asset Store EULA (Standard Unity Asset Store license).
+  Not redistributed: the pack lives in Assets/Toon_RTS/, which is git-ignored, so a fresh clone does not
+  contain it. Install it from the Asset Store to see it.
+  Our files that reference it (tracked): Assets/WhiteDragon/Art/ToonRTS/UD_demo_character_WD.prefab,
+  UndeadInfantry.controller, Undead_RTS_units_demo_Builtin.mat. Without the pack they show missing
+  references; nothing in Data/ uses them yet.
+
+NOT THIRD-PARTY (for clarity)
+- Unity packages in Packages/manifest.json (URP, Input System, IDE integrations, Unity AI Assistant and
+  Inference) are Unity's own, under Unity's licenses, and are restored by the Package Manager.
+- Placeholder visuals, sounds and the heart icon are generated in code; text uses Unity's built-in
+  LegacyRuntime font.
+
+PLANNED FREE SOURCES (none used yet, so none are listed above)
+Quaternius, Kenney, poly.pizza, itch.io, Mixamo, Freesound.
+When an asset from any source is added, list it under USED with its exact name, author, source URL and
+license (for example CC0 or CC-BY with the required credit line).
