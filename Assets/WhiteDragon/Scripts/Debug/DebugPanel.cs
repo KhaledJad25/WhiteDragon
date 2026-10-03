@@ -30,7 +30,17 @@ namespace WhiteDragon
         StatusEffectDefinition pendingStatus;
         int? pendingSeed;
 
-        GUIStyle seedStyle, headerStyle;
+        GUIStyle seedStyle, headerStyle, enemyLabelStyle;
+
+        // Enemies: spawn list (definitions and variants), kill all, freeze, state labels.
+        readonly List<(EnemyDefinition definition, EnemyVariant variant, string label)> spawnOptions =
+            new List<(EnemyDefinition, EnemyVariant, string)>();
+        string enemySearch = "";
+        string enemyMessage = "";
+        Vector2 enemyScroll;
+        bool showEnemyLabels;
+        int pendingSpawn = -1;
+        bool pendingKillAll;
 
         /// <summary>Parses a typed seed. Rejects empty, non-numeric, overflowing and zero input.</summary>
         public static bool TryParseSeed(string text, out int seed)
@@ -44,6 +54,10 @@ namespace WhiteDragon
             statuses = Resources.LoadAll<StatusEffectDefinition>("Statuses")
                 .OrderBy(s => s.id ?? "", StringComparer.Ordinal).ToArray();
             poolCounts = ItemCatalog.CountByPool();
+            foreach (var d in EnemyCatalog.All)
+                spawnOptions.Add((d, null, d.displayName));
+            foreach (var v in EnemyCatalog.Variants)
+                if (v.baseEnemy != null) spawnOptions.Add((v.baseEnemy, v, $"{v.baseEnemy.displayName} {v.displaySuffix}"));
             if (GetComponent<StressTest>() == null) gameObject.AddComponent<StressTest>();
             if (GetComponent<FrameRateCheck>() == null) gameObject.AddComponent<FrameRateCheck>();
         }
@@ -91,6 +105,35 @@ namespace WhiteDragon
                 ApplyToNearest(pendingStatus);
                 pendingStatus = null;
             }
+            if (pendingSpawn >= 0)
+            {
+                SpawnAtCrosshair(spawnOptions[pendingSpawn]);
+                pendingSpawn = -1;
+            }
+            if (pendingKillAll)
+            {
+                pendingKillAll = false;
+                int killed = 0;
+                foreach (var e in FindObjectsByType<Enemy>())
+                    if (!e.IsDead) { e.Kill(); killed++; }
+                enemyMessage = $"Killed {killed} enem{(killed == 1 ? "y" : "ies")}.";
+            }
+        }
+
+        /// <summary>Spawns where the crosshair points (on the floor, or hovering for flyers). Debug key namespace, no room.</summary>
+        void SpawnAtCrosshair((EnemyDefinition definition, EnemyVariant variant, string label) option)
+        {
+            var cam = Camera.main;
+            if (cam == null) { enemyMessage = "No camera."; return; }
+            var ray = new Ray(cam.transform.position, cam.transform.forward);
+            Vector3 point = Physics.Raycast(ray, out var hit, 40f, ~0, QueryTriggerInteraction.Ignore)
+                ? hit.point + hit.normal * 0.6f
+                : ray.GetPoint(8f);
+            if (Physics.Raycast(point + Vector3.up, Vector3.down, out var floor, 50f, ~0, QueryTriggerInteraction.Ignore))
+                point = floor.point;
+            if (option.definition.movement == MovementMode.Flying) point += Vector3.up * 1.5f;
+            var enemy = EnemySpawner.Spawn(option.definition, option.variant, point, EnemySpawner.NextDebugKey());
+            enemyMessage = $"Spawned {option.label} ({enemy.SpawnKey}).";
         }
 
         void RefreshPedestals()
@@ -123,13 +166,16 @@ namespace WhiteDragon
 
         void OnGUI()
         {
-            if (!open) return;
             if (seedStyle == null)
             {
                 seedStyle = new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold };
                 headerStyle = new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold };
                 headerStyle.normal.textColor = new Color(1f, 0.75f, 0.4f);
+                enemyLabelStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 12 };
+                enemyLabelStyle.normal.textColor = new Color(1f, 0.9f, 0.5f);
             }
+            if (showEnemyLabels) DrawEnemyLabels();
+            if (!open) return;
 
             // Top-right; drops below the hearts if the screen is too narrow for both side by side.
             float w = Mathf.Min(width, Screen.width - 20f);
@@ -140,6 +186,7 @@ namespace WhiteDragon
 
             GUILayout.Label("DEBUG (F1 to close)", headerStyle);
             DrawRun();
+            DrawEnemies();
             DrawStress();
             DrawStats();
             DrawRecipe();
@@ -272,6 +319,45 @@ namespace WhiteDragon
             if (stress == null || !stress.enabled) return;
             Header("Stress test / performance");
             stress.DrawGui();
+        }
+
+        void DrawEnemies()
+        {
+            Header("Enemies");
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Kill all")) pendingKillAll = true;
+            Enemy.FreezeAI = GUILayout.Toggle(Enemy.FreezeAI, "Freeze AI");
+            showEnemyLabels = GUILayout.Toggle(showEnemyLabels, "State labels");
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Spawn at crosshair:", GUILayout.Width(130f));
+            enemySearch = GUILayout.TextField(enemySearch);
+            GUILayout.EndHorizontal();
+            enemyScroll = GUILayout.BeginScrollView(enemyScroll, GUILayout.Height(110f));
+            string q = enemySearch.Trim();
+            for (int i = 0; i < spawnOptions.Count; i++)
+            {
+                if (q.Length > 0 && spawnOptions[i].label.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                if (GUILayout.Button(spawnOptions[i].label)) pendingSpawn = i;
+            }
+            GUILayout.EndScrollView();
+            if (enemyMessage.Length > 0) GUILayout.Label(enemyMessage);
+        }
+
+        /// <summary>Each awake enemy's brain state above its head (debug).</summary>
+        void DrawEnemyLabels()
+        {
+            var cam = Camera.main;
+            if (cam == null) return;
+            foreach (var e in Enemy.Live)
+            {
+                if (e == null || e.IsDead) continue;
+                var cc = e.GetComponent<CharacterController>();
+                Vector3 top = e.transform.position + Vector3.up * ((cc != null ? cc.height * e.transform.lossyScale.y : 2f) + 0.3f);
+                Vector3 screen = cam.WorldToScreenPoint(top);
+                if (screen.z <= 0f) continue;
+                GUI.Label(new Rect(screen.x - 80f, Screen.height - screen.y - 10f, 160f, 20f), $"{e.name}: {e.DebugLabel}", enemyLabelStyle);
+            }
         }
 
         void Header(string text) => GUILayout.Label(text, headerStyle);

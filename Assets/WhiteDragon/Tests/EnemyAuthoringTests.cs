@@ -73,6 +73,29 @@ namespace WhiteDragon
         }
 
         [Test]
+        public void NewEnemy_GetsItsOwnBehaviorCopies_InItsOwnFolder()
+        {
+            var a = EnemyContentCreator.CreateEnemy("Alpha", TestFamily);
+            var b = EnemyContentCreator.CreateEnemy("Beta", TestFamily);
+            string family = EnemyContentCreator.FamilyFolder(TestFamily);
+            var brainA = (StateMachineBrain)a.brain;
+            var brainB = (StateMachineBrain)b.brain;
+            Assert.AreNotSame(brainA, brainB);
+            for (int i = 0; i < 2; i++)
+            {
+                Assert.AreNotSame(brainA.states[0].behaviors[i], brainB.states[0].behaviors[i], "copies, never shared");
+                StringAssert.StartsWith(family + "/Alpha/", AssetDatabase.GetAssetPath(brainA.states[0].behaviors[i]));
+                StringAssert.StartsWith(family + "/Beta/", AssetDatabase.GetAssetPath(brainB.states[0].behaviors[i]));
+            }
+            StringAssert.StartsWith(family + "/Alpha/", AssetDatabase.GetAssetPath(a));
+            var zombieChase = EnemyCatalog.Find("ghoul").brain;
+            Assert.AreNotSame(zombieChase, brainA, "the zombie's shared assets are left alone");
+
+            ((MeleeContactBehavior)brainA.states[0].behaviors[1]).cooldown = 5f;
+            Assert.AreEqual(1f, ((MeleeContactBehavior)brainB.states[0].behaviors[1]).cooldown, "tuning one never changes the other");
+        }
+
+        [Test]
         public void EnemyInScene_AppendsToTheRoom_NeverShiftsOtherKeys()
         {
             var roomGo = Track(new GameObject("TestRoom"));

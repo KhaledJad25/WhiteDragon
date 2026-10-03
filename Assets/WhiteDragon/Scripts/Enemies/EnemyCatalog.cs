@@ -10,6 +10,23 @@ namespace WhiteDragon
     {
         static EnemyDefinition[] definitions;
         static EnemyVariant[] variants;
+        static Dictionary<EnemyDefinition, GameObject> prefabs;
+
+        /// <summary>The prefab under Resources/Enemies whose Enemy points at this definition, or null.</summary>
+        public static GameObject PrefabFor(EnemyDefinition definition)
+        {
+            if (definition == null) return null;
+            if (prefabs == null)
+            {
+                prefabs = new Dictionary<EnemyDefinition, GameObject>();
+                foreach (var go in Resources.LoadAll<GameObject>("Enemies"))
+                {
+                    var e = go.GetComponent<Enemy>();
+                    if (e != null && e.definition != null && !prefabs.ContainsKey(e.definition)) prefabs[e.definition] = go;
+                }
+            }
+            return prefabs.TryGetValue(definition, out var p) ? p : null;
+        }
 
         public static IReadOnlyList<EnemyDefinition> All => definitions ??= Load<EnemyDefinition>(d => d.id);
         public static IReadOnlyList<EnemyVariant> Variants => variants ??= Load<EnemyVariant>(v => v.id);
@@ -24,6 +41,7 @@ namespace WhiteDragon
         {
             definitions = null;
             variants = null;
+            prefabs = null;
         }
 
         static T[] Load<T>(Func<T, string> id) where T : ScriptableObject =>

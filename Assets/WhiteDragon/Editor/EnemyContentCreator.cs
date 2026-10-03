@@ -69,12 +69,19 @@ namespace WhiteDragon
 
         // ---------- Definitions and brains ----------
 
-        /// <summary>A definition plus a working starter brain (chase and touch) in Enemies/&lt;Family&gt;/.</summary>
+        /// <summary>
+        /// A definition plus a working starter brain (chase and touch) in the enemy's own folder,
+        /// Enemies/&lt;Family&gt;/&lt;Name&gt;/. The brain's behaviors are NEW assets in that folder, never shared ones,
+        /// so tuning this enemy never changes another; share by dragging an existing asset into a brain on purpose.
+        /// </summary>
         public static EnemyDefinition CreateEnemy(string name, string family)
         {
             if (!IsNameGiven(name)) return null;
             family = NormalizeFamily(family);
-            string folder = EnsureFamilyFolder(family);
+            string familyFolder = EnsureFamilyFolder(family);
+            string ownFolder = AssetDatabase.GenerateUniqueAssetPath($"{familyFolder}/{ToPascal(name)}");
+            AssetDatabase.CreateFolder(familyFolder, Path.GetFileName(ownFolder));
+            string folder = ownFolder;
             string id = ContentIds.MakeUnique(BaseId(name, "enemy"), EnemyDefinitions().Select(d => d.id).Where(x => !string.IsNullOrEmpty(x)));
             string file = ContentIds.ToFileName(name);
 

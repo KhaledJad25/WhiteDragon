@@ -77,12 +77,19 @@ namespace WhiteDragon
         /// <summary>Enabled enemies (debug/stress readout only).</summary>
         public static IReadOnlyList<Enemy> Live => live;
 
+        /// <summary>Debug: every enemy stands still and thinks nothing (F1 panel).</summary>
+        public static bool FreezeAI;
+
         void OnEnable() => live.Add(this);
         void OnDisable() => live.Remove(this);
         void OnDestroy() => RunSession.RunStarted -= OnRunStarted;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatics() => live.Clear();
+        static void ResetStatics()
+        {
+            live.Clear();
+            FreezeAI = false;
+        }
 
         void Awake() => Initialize();
 
@@ -185,7 +192,7 @@ namespace WhiteDragon
         {
             Initialize();
             if (dead) return;
-            if (dormant)
+            if (dormant || FreezeAI)
             {
                 events.Raise(ActorState.Idle);
                 return;

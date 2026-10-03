@@ -28,6 +28,8 @@ namespace WhiteDragon
         [Tooltip("How quickly it returns to its height (per second).")]
         [Min(0f)] public float heightStiffness = 4f;
 
+        public override MovementMode? RequiredMovement => MovementMode.Flying;
+
         protected override void Enter(EnemyContext ctx, State s)
         {
             // Start where it is around the player, circling either way (per-enemy randomness).

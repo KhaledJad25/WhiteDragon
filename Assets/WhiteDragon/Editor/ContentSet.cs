@@ -12,6 +12,13 @@ namespace WhiteDragon
         public readonly List<StatusEffectDefinition> Statuses = new List<StatusEffectDefinition>();
         public readonly List<EnemyDefinition> Enemies = new List<EnemyDefinition>();
         public readonly List<CharacterDefinition> Characters = new List<CharacterDefinition>();
+        public readonly List<EnemyBrainDefinition> Brains = new List<EnemyBrainDefinition>();
+        public readonly List<EnemyVariant> Variants = new List<EnemyVariant>();
+        public readonly List<EnemyBehavior> Behaviors = new List<EnemyBehavior>();
+        /// <summary>Enemy prefabs (an Enemy component pointing at a definition) found in the project.</summary>
+        public readonly List<GameObject> EnemyPrefabs = new List<GameObject>();
+        /// <summary>Enemy components in open scenes.</summary>
+        public readonly List<Enemy> SceneEnemies = new List<Enemy>();
 
         /// <summary>Asset path per asset. Assets without a path skip the folder check.</summary>
         public readonly Dictionary<Object, string> Paths = new Dictionary<Object, string>();

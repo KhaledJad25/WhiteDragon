@@ -39,7 +39,132 @@ namespace WhiteDragon
             CheckStatuses(set.Statuses.Where(s => s != null), issues);
             CheckLonelyTags(items, synergies, issues);
             CheckPedestalPools(set.PedestalPools, items, issues);
+            CheckIds(set.Variants.Where(v => v != null), v => v.id, "Enemy variant", issues);
+            CheckEnemies(set, issues);
+            CheckBrains(set.Brains.OfType<StateMachineBrain>().Where(b => b != null), issues);
+            CheckBehaviors(set, issues);
             return issues;
+        }
+
+        /// <summary>Behaviors used by more brains than this are reported (shared by accident?).</summary>
+        public const int SharedBehaviorLimit = 3;
+
+        // ---------- Enemies ----------
+
+        static void CheckEnemies(ContentSet set, List<ContentIssue> issues)
+        {
+            var withPrefab = new HashSet<EnemyDefinition>(set.EnemyPrefabs.Where(p => p != null)
+                .Select(p => p.GetComponent<Enemy>()).Where(e => e != null && e.definition != null).Select(e => e.definition));
+            foreach (var e in set.Enemies.Where(e => e != null))
+            {
+                if (e.brain == null)
+                    issues.Add(Error("enemy.nobrain", $"Enemy '{e.name}' has no brain. Every enemy needs one (Tools/WhiteDragon/New/Enemy makes a starter brain).", e));
+                if (e.visualPrefab == null && !withPrefab.Contains(e))
+                    issues.Add(Warning("enemy.novisual", $"Enemy '{e.name}' has no visual: no visualPrefab and no enemy prefab uses it, so tools can only spawn plain placeholder shapes.", e));
+                CheckMovement(e, e.brain, e.name, issues);
+            }
+            foreach (var v in set.Variants.Where(v => v != null && v.brain != null && v.baseEnemy != null))
+                CheckMovement(v.baseEnemy, v.brain, $"{v.name} (variant of {v.baseEnemy.name})", issues);
+
+            foreach (var e in set.SceneEnemies.Where(e => e != null))
+            {
+                var brain = e.variant != null && e.variant.brain != null ? e.variant.brain : e.definition != null ? e.definition.brain : null;
+                if (brain == null)
+                    issues.Add(Warning("enemy.builtinchase", $"Scene enemy '{e.name}' still uses the old built-in chase (no definition or no brain).", e));
+            }
+        }
+
+        static void CheckMovement(EnemyDefinition enemy, EnemyBrainDefinition brain, string who, List<ContentIssue> issues)
+        {
+            if (!(brain is StateMachineBrain sm)) return;
+            foreach (var b in sm.states.SelectMany(s => s.behaviors).Where(b => b != null).Distinct())
+                if (b.RequiredMovement.HasValue && b.RequiredMovement.Value != enemy.movement)
+                    issues.Add(Error("enemy.movement", $"{enemy.movement} enemy '{who}' uses '{b.name}', which only works for {b.RequiredMovement.Value} enemies.", enemy));
+        }
+
+        // ---------- Brains ----------
+
+        static void CheckBrains(IEnumerable<StateMachineBrain> brains, List<ContentIssue> issues)
+        {
+            foreach (var brain in brains)
+            {
+                if (brain.states.Count == 0)
+                {
+                    issues.Add(Error("brain.nostates", $"Brain '{brain.name}' has no states.", brain));
+                    continue;
+                }
+                var names = new HashSet<string>(brain.states.Select(s => s.name));
+                foreach (var s in brain.states)
+                {
+                    for (int n = 0; n < s.behaviors.Count; n++)
+                        if (s.behaviors[n] == null)
+                            issues.Add(Error("brain.nullbehavior", $"Brain '{brain.name}' state '{s.name}' has an empty behavior slot (element {n}).", brain));
+                    foreach (var t in s.transitions.Where(t => !names.Contains(t.target)))
+                        issues.Add(Error("brain.badtarget", $"Brain '{brain.name}' state '{s.name}' goes to '{t.target}', which is not a state of this brain.", brain));
+                    if (brain.states.Count > 1 && s.transitions.Count == 0 && !s.terminal)
+                        issues.Add(Error("brain.noexit", $"Brain '{brain.name}' state '{s.name}' has no way out. Add a transition, or tick Terminal if it is meant to be final.", brain));
+                }
+                for (int i = 0; i < brain.states.Count; i++)
+                {
+                    var attack = brain.states[i].behaviors.FirstOrDefault(b => b != null && b.StartsAttack);
+                    if (attack != null && !Telegraphed(brain, i, new HashSet<int>()))
+                        issues.Add(Error("brain.notelegraph",
+                            $"Brain '{brain.name}' state '{brain.states[i].name}' starts an attack ('{attack.name}') without a Telegraph state before it.", brain));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Every way into state i passes through a state that runs a Telegraph. States with no behaviors (pure
+        /// decision states like "Check") are looked through. Entering at the start state counts as untelegraphed.
+        /// </summary>
+        static bool Telegraphed(StateMachineBrain brain, int i, HashSet<int> visiting)
+        {
+            if (i == 0 || !visiting.Add(i)) return false;
+            string name = brain.states[i].name;
+            for (int p = 0; p < brain.states.Count; p++)
+            {
+                var pred = brain.states[p];
+                if (!pred.transitions.Any(t => t.target == name)) continue;
+                if (pred.behaviors.Any(b => b is TelegraphBehavior)) continue;
+                if (pred.behaviors.Count(b => b != null) == 0 && Telegraphed(brain, p, new HashSet<int>(visiting))) continue;
+                return false;
+            }
+            return true;
+        }
+
+        // ---------- Behaviors ----------
+
+        static void CheckBehaviors(ContentSet set, List<ContentIssue> issues)
+        {
+            var brains = set.Brains.OfType<StateMachineBrain>().Where(b => b != null).ToList();
+            var enemiesByBrain = new Dictionary<EnemyBrainDefinition, List<string>>();
+            foreach (var e in set.Enemies.Where(e => e != null && e.brain != null)) Users(enemiesByBrain, e.brain).Add(e.name);
+            foreach (var v in set.Variants.Where(v => v != null && v.brain != null)) Users(enemiesByBrain, v.brain).Add(v.name);
+
+            var undescribed = new HashSet<Type>();
+            foreach (var b in set.Behaviors.Where(b => b != null))
+            {
+                var info = (EnemyBehaviorInfoAttribute)Attribute.GetCustomAttribute(b.GetType(), typeof(EnemyBehaviorInfoAttribute), false);
+                if ((info == null || string.IsNullOrWhiteSpace(info.Description)) && undescribed.Add(b.GetType()))
+                    issues.Add(Warning("behavior.nodescription", $"Behavior type {b.GetType().Name} has no [EnemyBehaviorInfo] description.", b));
+
+                var usedBy = brains.Where(sm => sm.states.Any(s => s.behaviors.Contains(b))).ToList();
+                if (usedBy.Count == 0)
+                    issues.Add(Warning("behavior.unused", $"Behavior asset '{b.name}' is used by no brain.", b));
+                else if (usedBy.Count > SharedBehaviorLimit)
+                {
+                    var enemies = usedBy.SelectMany(sm => enemiesByBrain.TryGetValue(sm, out var list) ? list : new List<string>()).Distinct();
+                    issues.Add(Warning("behavior.shared",
+                        $"Behavior asset '{b.name}' is used by {usedBy.Count} brains (shared by accident?). Enemies: {string.Join(", ", enemies)}.", b));
+                }
+            }
+        }
+
+        static List<string> Users(Dictionary<EnemyBrainDefinition, List<string>> map, EnemyBrainDefinition brain)
+        {
+            if (!map.TryGetValue(brain, out var list)) map[brain] = list = new List<string>();
+            return list;
         }
 
         static void CheckIds<T>(IEnumerable<T> assets, Func<T, string> getId, string kind, List<ContentIssue> issues) where T : Object

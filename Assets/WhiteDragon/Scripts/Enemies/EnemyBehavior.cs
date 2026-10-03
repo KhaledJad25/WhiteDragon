@@ -16,6 +16,13 @@ namespace WhiteDragon
         /// <summary>One frame; returns true when finished (the BehaviorFinished transition reads this).</summary>
         public abstract bool Tick(EnemyContext ctx, object state, float dt);
         public abstract void Exit(EnemyContext ctx, object state);
+
+        /// <summary>True for behaviors that start an attack (the validator requires a Telegraph state before them).
+        /// Passive contact damage is not an attack start.</summary>
+        public virtual bool StartsAttack => false;
+
+        /// <summary>Movement mode this behavior needs, or null if it works for any (the validator checks it).</summary>
+        public virtual MovementMode? RequiredMovement => null;
     }
 
     /// <summary>

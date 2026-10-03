@@ -293,6 +293,16 @@ namespace WhiteDragon
             Debug.Log($"[Projectile] Live projectile cap ({GameFeel.MaxProjectiles}) reached; recycling the oldest rocks. See GameFeelSettings.maxProjectiles.");
         }
 
+        /// <summary>Despawns every live projectile fired by this owner (debug tools cleaning up after a test enemy).</summary>
+        public static void DespawnOwnedBy(Transform shooter)
+        {
+            for (int i = active.Count - 1; i >= 0; i--)
+            {
+                var p = active[i];
+                if (p != null && p.owner == shooter) p.Despawn();
+            }
+        }
+
         /// <summary>Destroys pooled and live projectiles and forgets them (tests and scene cleanup).</summary>
         public static void ClearAll()
         {

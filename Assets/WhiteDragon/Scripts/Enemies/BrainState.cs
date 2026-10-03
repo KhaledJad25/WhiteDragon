@@ -13,5 +13,7 @@ namespace WhiteDragon
         public List<EnemyBehavior> behaviors = new List<EnemyBehavior>();
         [Tooltip("Checked in order after the behaviors run; the first one that holds is taken.")]
         public List<BrainTransition> transitions = new List<BrainTransition>();
+        [Tooltip("This state is meant to have no way out (for example a final state). Silences the validator's \"no way out\" error.")]
+        public bool terminal;
     }
 }

@@ -25,6 +25,8 @@ namespace WhiteDragon
         [Tooltip("Extra reach beyond both bodies' radii (meters).")]
         [Min(0f)] public float extraReach = 0.3f;
 
+        public override bool StartsAttack => true;
+
         protected override void Enter(EnemyContext ctx, State s)
         {
             s.Time = 0f;

@@ -27,6 +27,8 @@ namespace WhiteDragon
         [Tooltip("Spawn point relative to the enemy (local space; +Z is forward).")]
         public Vector3 muzzleOffset = new Vector3(0f, 1.4f, 0.6f);
 
+        public override bool StartsAttack => true;
+
         protected override void Enter(EnemyContext ctx, State s)
         {
             s.Fired = false;

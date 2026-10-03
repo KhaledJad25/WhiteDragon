@@ -32,8 +32,17 @@ namespace WhiteDragon
             Add(set, set.Statuses);
             Add(set, set.Enemies);
             Add(set, set.Characters);
+            Add(set, set.Brains);
+            Add(set, set.Variants);
+            Add(set, set.Behaviors);
+            foreach (var guid in AssetDatabase.FindAssets("t:Prefab"))
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid));
+                if (prefab != null && prefab.GetComponent<Enemy>() != null) set.EnemyPrefabs.Add(prefab);
+            }
             foreach (var p in Object.FindObjectsByType<ItemPedestal>(FindObjectsInactive.Include))
                 set.PedestalPools.Add((p.pool, p));
+            set.SceneEnemies.AddRange(Object.FindObjectsByType<Enemy>(FindObjectsInactive.Include));
             return ContentRules.Validate(set);
         }
 
