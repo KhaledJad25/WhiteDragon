@@ -8,5 +8,7 @@ namespace WhiteDragon
         Attack,
         Hit,
         Die,
+        /// <summary>Attack wind-up (an enemy's telegraph). Without its own mapping, AnimatorStateDriver plays Attack.</summary>
+        Windup,
     }
 }

@@ -10,11 +10,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e464a2c8e9f61664293efa3cc3e113b7, type: 3}
-  m_Name: Brute
+  m_Name: Ghoul
   m_EditorClassIdentifier: WhiteDragon.Runtime::WhiteDragon.EnemyDefinition
-  id: brute
-  displayName: Brute
-  maxHealth: 45
-  moveSpeed: 1.6
-  contactDamage: 2
-  tint: {r: 0.45, g: 0.12, b: 0.1, a: 1}
+  id: ghoul
+  displayName: Ghoul
+  maxHealth: 20
+  moveSpeed: 2.5
+  contactDamage: 1
+  tint: {r: 0.42, g: 0.48, b: 0.36, a: 1}
+  visualPrefab: {fileID: 0}
+  deathDelay: 0
+  tags:
+  - melee
+  - ground
+  family: undead
+  threatCost: 1
+  isBoss: 0
+  brain: {fileID: 11400000, guid: d3cb2786e3bac164eb16d9825ec68d47, type: 2}
+  movement: 0

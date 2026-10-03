@@ -28,6 +28,7 @@ namespace WhiteDragon
 
         ShotRecipe recipe;
         Transform owner;
+        Team team;
         Vector3 velocity;
         float travelled;
         float age;
@@ -46,6 +47,8 @@ namespace WhiteDragon
 
         public ShotRecipe Recipe => recipe;
         public Transform Owner => owner;
+        /// <summary>Who fired it; Teams.CanDamage decides what it can hurt.</summary>
+        public Team Team => team;
         public float Radius => BaseRadius * recipe.SizeScale;
         public Vector3 Velocity { get => velocity; set => velocity = value; }
         /// <summary>Multiplier on gravity; effects may change it.</summary>
@@ -65,7 +68,7 @@ namespace WhiteDragon
 
         static bool Pooling => Application.isPlaying || PoolInEditMode;
 
-        public static Projectile Spawn(ShotRecipe recipe, Vector3 position, Vector3 direction, Transform owner)
+        public static Projectile Spawn(ShotRecipe recipe, Vector3 position, Vector3 direction, Transform owner, Team team = Team.Player)
         {
             if (active.Count >= GameFeel.MaxProjectiles) RecycleOldest();
 
@@ -73,14 +76,15 @@ namespace WhiteDragon
             if (p == null) p = new GameObject("Rock").AddComponent<Projectile>();
             p.transform.SetPositionAndRotation(position, Quaternion.identity);
             p.gameObject.SetActive(true);
-            p.Begin(recipe, direction, owner);
+            p.Begin(recipe, direction, owner, team);
             return p;
         }
 
-        void Begin(ShotRecipe shotRecipe, Vector3 direction, Transform shotOwner)
+        void Begin(ShotRecipe shotRecipe, Vector3 direction, Transform shotOwner, Team shotTeam)
         {
             recipe = shotRecipe;
             owner = shotOwner;
+            team = shotTeam;
             velocity = direction.normalized * shotRecipe.Speed;
             pierceLeft = shotRecipe.Pierce;
             travelled = 0f;
@@ -194,11 +198,17 @@ namespace WhiteDragon
                     Despawn();
                     return;
                 }
+                // Wrong team: fly through it (enemy shots pass other enemies; player rocks pass the player).
+                if (!Teams.CanDamage(team, target.Team)) continue;
                 if (!hitTargets.Add(target)) continue;
 
                 target.TakeDamage(recipe.Damage, point);
-                DamageNumber.Spawn(point, recipe.Damage, DamageTypeColors.NumberColor(recipe.DamageType), target);
-                GameFeel.OnHit(point, tint);
+                // The player shows its own hurt feedback; floating numbers and bursts are for what the player hits.
+                if (target.Team != Team.Player)
+                {
+                    DamageNumber.Spawn(point, recipe.Damage, DamageTypeColors.NumberColor(recipe.DamageType), target);
+                    GameFeel.OnHit(point, tint);
+                }
                 for (int i = 0; i < effectCount; i++)
                     effects[i].Effect.OnHit(effects[i], target, point);
 

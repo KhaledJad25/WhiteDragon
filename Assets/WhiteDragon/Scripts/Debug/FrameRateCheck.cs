@@ -191,7 +191,7 @@ namespace WhiteDragon
 
         IEnumerator EnemySpeed(int idx)
         {
-            var def = Instantiate(Resources.Load<EnemyDefinition>("Enemies/Ghoul"));
+            var def = Instantiate(EnemyCatalog.Find("ghoul"));
             def.maxHealth = 1e9f;
             var go = new GameObject("FrameCheckEnemy");
             temp.Add(go);

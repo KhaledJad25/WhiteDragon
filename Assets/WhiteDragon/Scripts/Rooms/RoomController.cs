@@ -31,6 +31,9 @@ namespace WhiteDragon
             initialized = true;
             GetComponent<BoxCollider>().isTrigger = true;
             SetDoorsClosed(false);
+            // Stable per-enemy random key: room id + index in this list (reordering the list changes the keys).
+            for (int i = 0; i < enemies.Count; i++)
+                if (enemies[i] != null) enemies[i].SetSpawnKey(Id + "#" + i);
             foreach (var e in enemies)
                 if (e != null) e.SetDormant(true);
             if (rewardPedestal != null) rewardPedestal.gameObject.SetActive(false);

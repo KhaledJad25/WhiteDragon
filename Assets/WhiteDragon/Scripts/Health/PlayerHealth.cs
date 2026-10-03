@@ -3,13 +3,18 @@ using UnityEngine;
 namespace WhiteDragon
 {
     /// <summary>The player's hearts. Logic lives in HealthState; this adds timing, feedback and death.</summary>
-    public class PlayerHealth : MonoBehaviour
+    public class PlayerHealth : MonoBehaviour, IDamageable
     {
         public int startingContainers = 3;
 
         HealthState state;
 
         public HealthState State => state ??= new HealthState(startingContainers);
+
+        public Team Team => Team.Player;
+
+        /// <summary>Enemy damage arrives here; amount is in half hearts (see Teams.ToHalfHearts).</summary>
+        public void TakeDamage(float amount, Vector3 hitPoint) => Damage(Teams.ToHalfHearts(amount));
 
         void OnEnable() => State.Died += OnDied;
         void OnDisable() => State.Died -= OnDied;

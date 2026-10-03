@@ -74,6 +74,22 @@ namespace WhiteDragon
             }
         }
 
+        /// <summary>
+        /// A new, independent generator for one thing in the run (for example an enemy), from this run's seed and a
+        /// stable key. Same seed and key = same sequences; drawing from it never touches this generator.
+        /// </summary>
+        public RunRandom Derive(string key)
+        {
+            ulong hash = 14695981039346656037UL; // FNV-1a: stable across runs and platforms (string.GetHashCode is not)
+            if (key != null)
+                foreach (char c in key)
+                {
+                    hash ^= c;
+                    hash *= 1099511628211UL;
+                }
+            return new RunRandom((int)Mix((ulong)(uint)seed ^ Mix(hash)));
+        }
+
         double NextDouble(RandomStream stream) => (Next(stream) >> 11) * (1.0 / 9007199254740992.0);
 
         ulong Next(RandomStream stream)

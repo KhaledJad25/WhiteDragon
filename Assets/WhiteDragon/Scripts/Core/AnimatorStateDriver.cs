@@ -56,9 +56,19 @@ namespace WhiteDragon
             if (source != null) source.StateRaised -= Apply;
         }
 
+        /// <summary>The state whose mappings play for this one: Windup without a mapping falls back to Attack.</summary>
+        public static ActorState Resolve(ActorState state, List<Mapping> mappings)
+        {
+            if (state != ActorState.Windup) return state;
+            foreach (var m in mappings)
+                if (m.state == ActorState.Windup && !string.IsNullOrEmpty(m.parameter)) return state;
+            return ActorState.Attack;
+        }
+
         public void Apply(ActorState state)
         {
             if (animator == null || animator.runtimeAnimatorController == null) return;
+            state = Resolve(state, mappings);
             foreach (var m in mappings)
             {
                 if (m.state != state || string.IsNullOrEmpty(m.parameter)) continue;

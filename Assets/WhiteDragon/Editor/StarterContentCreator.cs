@@ -88,14 +88,16 @@ namespace WhiteDragon
             Synergy("bloodletter", "Bloodletter", "Rocks drink blood.", "blood", 2, null, edits: E(pierce: 1, damageType: DamageType.Blood));
 
             // Enemies
-            Asset<EnemyDefinition>("Enemies", "Ghoul", e =>
+            Asset<EnemyDefinition>("Enemies/Undead", "Ghoul", e =>
             {
                 e.id = "ghoul"; e.displayName = "Ghoul"; e.maxHealth = 20f; e.moveSpeed = 2.5f; e.contactDamage = 1;
+                e.family = "undead"; e.tags = new[] { "melee", "ground" };
                 e.tint = new Color(0.42f, 0.48f, 0.36f);
             });
-            Asset<EnemyDefinition>("Enemies", "Brute", e =>
+            Asset<EnemyDefinition>("Enemies/Undead", "Brute", e =>
             {
                 e.id = "brute"; e.displayName = "Brute"; e.maxHealth = 45f; e.moveSpeed = 1.6f; e.contactDamage = 2;
+                e.family = "undead"; e.tags = new[] { "melee", "ground" };
                 e.tint = new Color(0.45f, 0.12f, 0.1f);
             });
 

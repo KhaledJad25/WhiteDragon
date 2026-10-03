@@ -95,7 +95,7 @@ namespace WhiteDragon
             effectRecipe.AddEffect(Resources.Load<ShotEffect>("Effects/Homing"));
             effectRecipe.AddEffect(Resources.Load<ShotEffect>("Effects/ApplyBurn"));
             burn = Resources.Load<StatusEffectDefinition>("Statuses/Burn");
-            var ghoul = Resources.Load<EnemyDefinition>("Enemies/Ghoul");
+            var ghoul = EnemyCatalog.Find("ghoul");
             if (ghoul != null)
             {
                 enemyDef = Instantiate(ghoul);
