@@ -35,6 +35,18 @@ Content must be EASY to add, change, and remove in the Unity Editor, by a human 
 - Telegraph rule: any behavior that initiates an attack must be preceded by a Telegraph. Passive contact damage (MeleeContact on a body that is always dangerous, like the zombie) is exempt.
 - Enemies with no brain still use the old built-in chase. Once every definition has a brain, delete that path.
 
+## Enemy rules
+
+- Behavior and brain assets are shared and stateless: Inspector numbers only. Anything that changes while an enemy runs lives in the per-enemy State.
+- Copies by default: a new enemy gets its own behavior assets in Enemies/<Family>/<Name>/. Share an asset between enemies only on purpose (tuning it changes all of them).
+- Every attack is preceded by a Telegraph state (the Telegraph rule above). Passive contact damage is exempt.
+- Per-enemy randomness only through the enemy's own RunRandom (ctx.Random, derived from the run seed and its spawn key). Never UnityEngine.Random or System.Random.
+- Room enemy lists are append-only: an enemy's key is room id + its index, so inserting or reordering changes other enemies' behavior.
+- Enemies spawned by tools or debug code use keys from the "debug:N" namespace (EnemySpawner) and never join a RoomController.
+- Teams: enemy damage goes through ctx.Damage (team-checked); damage to the player is in half hearts (Teams.ToHalfHearts), so invincibility applies.
+- Folders: assets in Data/Resources/Enemies/<Family>/; behavior code in Scripts/Enemies/Behaviors/Common or Specific/<Enemy>/; names <Name>Behavior.
+- Run the smoke test (Tools/WhiteDragon/Smoke Test All Enemies, Play mode) and Validate Content after adding or changing any enemy.
+
 ## Progression rules (hidden progression)
 
 - Unlocks widen what CAN appear in future runs. They never raise baseline stats.

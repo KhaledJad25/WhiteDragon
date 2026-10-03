@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e464a2c8e9f61664293efa3cc3e113b7, type: 3}
+  m_Name: Exploder
+  m_EditorClassIdentifier: WhiteDragon.Runtime::WhiteDragon.EnemyDefinition
+  id: exploder
+  displayName: Exploder
+  maxHealth: 12
+  moveSpeed: 3.2
+  contactDamage: 0
+  tint: {r: 0.45, g: 0.5, b: 0.25, a: 1}
+  visualPrefab: {fileID: 0}
+  deathDelay: 0
+  tags:
+  - melee
+  - ground
+  - explosive
+  family: undead
+  threatCost: 2
+  isBoss: 0
+  brain: {fileID: 11400000, guid: 74f3f7840bb39dd4584be8780c5b3b6d, type: 2}
+  movement: 0

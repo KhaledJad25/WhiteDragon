@@ -7,8 +7,12 @@ EDITOR TOOLS (menu Tools/WhiteDragon)
 - New > Item / Synergy / Shot Effect Asset / Status Effect / Apply-Status Effect / Enemy / Character:
   type a name, press Enter. The asset is created in the right folder with a unique lowercase id,
   then selected so you can fill it in. It never overwrites an existing asset.
-- Content Browser: every asset by tab, with search (name, id, tags) and item filters (tag, pool, rarity).
+- New > Enemy Brain / Enemy Variant / Enemy Behavior Script / Enemy Behavior Asset / Enemy in Scene:
+  see ADDING AN ENEMY below.
+- Content Browser: every asset by tab, with search (name, id, tags, family, category) and item filters
+  (tag, pool, rarity). Enemies, Brains, Variants and Behaviors tabs show where things are used.
   Click a row to select it. "New" creates one for the current tab. "Validate" checks everything.
+- Smoke Test All Enemies (Play mode only): runs every enemy and variant for 10 simulated seconds.
 - Validate Content: lists errors (must fix) and warnings (check) in the Console and a results window.
   Click a result to select the asset. It never changes anything.
 - Run Tests: runs all tests; the summary appears in the Console.
@@ -61,13 +65,7 @@ EDITOR TOOLS (menu Tools/WhiteDragon)
    4. Items, synergies and characters can use it immediately; F1 shows it automatically.
 
 7. ADD AN ENEMY
-   1. Tools/WhiteDragon/New/Enemy, name it, fill maxHealth, moveSpeed, contactDamage, tint.
-   2. In the scene: empty GameObject + CharacterController (height, radius, center at half height)
-      + Enemy (StatusReceiver is added for you). Assign the definition.
-   3. Add primitive children for the look and REMOVE their colliders (chunky, exaggerated shapes).
-   4. Drag it into a RoomController's enemies list.
-   5. A new BEHAVIOR (ranged, charging...) needs code: a new MonoBehaviour implementing IDamageable,
-      driven by an EnemyDefinition, using Enemy.cs as the template.
+   See ADDING AN ENEMY below (new enemies, variants, behaviors, brains, folders, validator, smoke test).
 
 8. ADD A DAMAGE TYPE
    1. Append one line at the END of DamageType (Scripts/Combat/DamageType.cs).
@@ -168,6 +166,90 @@ E. Effects quality (Data/Resources/GameFeelSettings.asset > quality)
 
 Outline cost was measured on an NVIDIA GeForce GTX 1660 Ti at 1280x720: no measurable cost (below the
 ~0.1 ms GPU-clock noise). It may cost more on weaker GPUs or at higher resolutions; use E or D there.
+
+
+ADDING AN ENEMY
+How enemies work: an EnemyDefinition (stats, family, tags, movement Ground or Flying) points at a brain.
+A brain is a StateMachineBrain asset (states; each state runs a list of behavior assets together and has
+transitions to other states) or a code brain. Behaviors are small shared assets with Inspector numbers;
+everything that changes while an enemy runs lives in a per-enemy State, never in the asset.
+
+Folders and names
+- Assets: Data/Resources/Enemies/<Family>/ (Undead, Beast...). A new enemy gets its own folder,
+  Enemies/<Family>/<Name>/, holding <Name>.asset, <Name>_Brain.asset, its behavior assets
+  (<Name>_<Role>.asset, e.g. Exploder_Telegraph) and Enemy_<Name>.prefab.
+- Behavior code: Scripts/Enemies/Behaviors/Common/<Name>Behavior.cs (shared by many enemies) or
+  Scripts/Enemies/Behaviors/Specific/<Enemy>/<Name>Behavior.cs (one enemy's). Code brains:
+  Scripts/Enemies/Brains/.
+
+A. A NEW ENEMY (no code)
+   1. Tools/WhiteDragon/New/Enemy. Name it, type its family (lowercase, e.g. undead), Enter. You get the
+      definition and a working starter brain (Chase: MoveToward + MeleeContact) with its OWN copies of the
+      behavior assets in Enemies/<Family>/<Name>/.
+   2. Select the definition: maxHealth, moveSpeed, contactDamage (half hearts), tint, tags, threatCost,
+      movement (Ground or Flying).
+   3. Open <Name>_Brain: add states, drag behavior assets into each state's list, add transitions
+      (condition + value + target state name). The first state is where it starts. Every attack state
+      needs a Telegraph state before it (Telegraph -> Shoot, or Telegraph -> an empty "Check" -> Shoot).
+   4. Look: make Enemy_<Name>.prefab in its folder (root with CharacterController, StatusReceiver and
+      Enemy pointing at the definition; children = primitive shapes WITHOUT colliders), or set visualPrefab.
+      Copy Enemies/Undead/Exploder/Enemy_Exploder.prefab as a template.
+   5. Into a room: select the room (or something inside it), Tools/WhiteDragon/New/Enemy in Scene, pick the
+      enemy (and a variant if you like), Create. It is APPENDED to the room's enemy list; never insert into
+      or reorder that list (each enemy's random key is room id + its index).
+   6. Run Validate Content and fix every error, then the smoke test (H below).
+
+B. A VARIANT (no code)
+   1. Tools/WhiteDragon/New/Enemy Variant, pick the base enemy, name it (e.g. Armored), Enter.
+   2. Set the multipliers (health, speed, damage, scale), optional tint, visual prefab or brain override,
+      and weight. Examples: Undead/Armored_Zombie, Beast/Fast_Bat, Undead/Elite_Skeleton (own brain).
+   3. Spawn it from F1 in Play (Enemies > the "(Variant)" entry) or with Enemy in Scene.
+
+C. REUSING A BEHAVIOR WITH DIFFERENT NUMBERS (no code)
+   1. Tools/WhiteDragon/New/Enemy Behavior Asset: search by name, description or category, pick a type,
+      name the asset, type the family folder, Create. (Or duplicate an existing asset with Ctrl+D.)
+   2. Set its numbers and drag it into a brain state. Two assets of the same type are independent.
+   3. Sharing one asset between enemies is allowed but deliberate: tuning it changes all of them (Ghoul and
+      Brute share the zombie's on purpose). The validator warns when one asset is in more than 3 brains.
+
+D. A ONE-OFF BEHAVIOR (one small class)
+   1. Tools/WhiteDragon/New/Enemy Behavior Script: name (e.g. Explode) and, for one enemy's behavior, the
+      enemy name (e.g. Exploder). It writes <Name>Behavior.cs from a template that compiles as is.
+   2. Fill in the one-line [EnemyBehaviorInfo] description. Put per-enemy values in State (reset in
+      Enter), numbers as Inspector fields, the logic in Tick (return true when done). Use the ctx helpers:
+      MoveToward, Move, FaceTarget, Freeze, Damage (team-checked, half hearts to the player), FireProjectile
+      (pooled), Random (the enemy's own generator), DistanceToTarget, HasLineOfSight, InContactRange.
+   3. If it starts an attack, add: public override bool StartsAttack => true; (the validator then checks a
+      Telegraph comes first). If it only works for one movement mode, override RequiredMovement.
+   4. Never allocate in Tick (no new, no LINQ, no string building); never use UnityEngine.Random.
+   5. After it compiles: Tools/WhiteDragon/New/Enemy Behavior Asset, pick it, Create, drag into a state.
+   Example: Scripts/Enemies/Behaviors/Specific/Exploder/ExplodeBehavior.cs.
+
+E. A CODE BRAIN (for complex enemies and bosses)
+   1. Create Scripts/Enemies/Brains/<Name>Brain.cs: class <Name>Brain : EnemyBrainDefinition<<Name>Brain.State>
+      with [CreateAssetMenu]. Override Begin, Tick (and End); keep per-enemy data in State.
+   2. Write the AI with the same ctx helpers; set ctx.DebugLabel to show your current phase in F1.
+      Template: Scripts/Enemies/Brains/ExampleCodeBrain.cs.
+   3. Create its asset (Assets > Create > WhiteDragon > ...) and drag it into the definition's brain field.
+
+F. A NEW MOVEMENT MODE (code)
+   1. Append one line at the END of MovementMode (Scripts/Enemies/MovementMode.cs). Never reorder.
+   2. Handle it in Enemy.ApplyMovement (how its velocity, gravity and the CharacterController move) and, if
+      it differs, in EnemyContext.Move. Behaviors that only make sense for it override RequiredMovement.
+
+G. VALIDATE
+   Tools/WhiteDragon/Validate Content. Errors: no brain, Ground/Flying mismatch, brain with no states, a
+   transition to a missing state, an empty behavior slot, a state with no way out (tick Terminal if it is
+   meant to be final), an attack without a Telegraph before it, duplicate ids, an asset whose script was
+   deleted. Warnings: no visual, a scene enemy still on the old built-in chase, a behavior with no
+   description, an unused behavior asset, one behavior asset used by more than 3 brains.
+
+H. SMOKE TEST (after adding or changing any enemy)
+   Press Play, then Tools/WhiteDragon/Smoke Test All Enemies. It runs every enemy and variant for 10
+   simulated seconds against a scripted player in a temporary scene, then removes everything. It FAILS on
+   any exception or logged error, and on an enemy that never moves or changes state (unless its first state
+   is marked Terminal). The Console shows each enemy's states, distance moved and bytes allocated per frame.
+   F1 in Play: spawn any enemy or variant at the crosshair, Kill all, Freeze AI, and AI state labels.
 
 
 RULES THAT KEEP CONTENT EASY TO CHANGE
