@@ -56,9 +56,8 @@ namespace WhiteDragon
                 (name, index) => CreateApplyStatus(statuses[index], name));
         }
 
-        [MenuItem(Menu + "Enemy", priority = 6)]
-        public static void NewEnemy() =>
-            NamePromptWindow.Show("New Enemy", "New Enemy", name => CreateEnemy(name));
+        /// <summary>Same as Tools/WhiteDragon/New/Enemy (EnemyContentCreator).</summary>
+        public static void NewEnemy() => EnemyContentCreator.NewEnemy();
 
         [MenuItem(Menu + "Character", priority = 20)]
         public static void NewCharacter() =>
@@ -90,12 +89,8 @@ namespace WhiteDragon
                 s.displayName = name;
             });
 
-        public static EnemyDefinition CreateEnemy(string name) =>
-            CreateWithId<EnemyDefinition>("Enemies", name, e => e.id, (e, id) =>
-            {
-                e.id = id;
-                e.displayName = name;
-            });
+        /// <summary>A definition with a starter brain in Enemies/Misc (see EnemyContentCreator.CreateEnemy for a family).</summary>
+        public static EnemyDefinition CreateEnemy(string name) => EnemyContentCreator.CreateEnemy(name, "misc");
 
         public static CharacterDefinition CreateCharacter(string name) =>
             CreateWithId<CharacterDefinition>("Characters", name, c => c.id, (c, id) =>

@@ -10,10 +10,18 @@ namespace WhiteDragon
     /// <summary>Browse, search and filter all content. Click a row to select and ping the asset.</summary>
     public class ContentBrowserWindow : EditorWindow
     {
-        enum Tab { Items, Synergies, Effects, Statuses, Enemies, Characters }
+        enum Tab { Items, Synergies, Effects, Statuses, Enemies, Brains, Variants, Behaviors, Characters }
 
         static readonly string[] TabNames = Enum.GetNames(typeof(Tab));
         static readonly string[] Columns = { "Name", "Id", "Rarity", "Tags", "Pools" };
+        /// <summary>Column headers where a tab uses the columns differently (else Columns).</summary>
+        static readonly Dictionary<Tab, string[]> TabColumns = new Dictionary<Tab, string[]>
+        {
+            { Tab.Enemies, new[] { "Name", "Id", "Family", "Tags", "Brain" } },
+            { Tab.Brains, new[] { "Name", "Kind", "Family", "States", "Used by" } },
+            { Tab.Variants, new[] { "Name", "Id", "Base enemy", "Overrides", "Brain" } },
+            { Tab.Behaviors, new[] { "Name", "Type", "Category", "Family", "Used by" } },
+        };
         static readonly float[] ColumnWidths = { 0.22f, 0.2f, 0.1f, 0.24f, 0.24f };
         const string All = "(all)";
 
@@ -52,7 +60,13 @@ namespace WhiteDragon
             rows[Tab.Synergies] = ContentCreator.FindAll<SynergyDefinition>().Select(SynergyRow).ToList();
             rows[Tab.Effects] = ContentCreator.FindAll<ShotEffect>().Select(EffectRow).ToList();
             rows[Tab.Statuses] = ContentCreator.FindAll<StatusEffectDefinition>().Select(StatusRow).ToList();
-            rows[Tab.Enemies] = ContentCreator.FindAll<EnemyDefinition>().Select(EnemyRow).ToList();
+            var enemies = ContentCreator.FindAll<EnemyDefinition>().ToList();
+            var variants = ContentCreator.FindAll<EnemyVariant>().ToList();
+            var brains = ContentCreator.FindAll<EnemyBrainDefinition>().ToList();
+            rows[Tab.Enemies] = enemies.Select(EnemyRow).ToList();
+            rows[Tab.Brains] = brains.Select(b => BrainRow(b, enemies, variants)).ToList();
+            rows[Tab.Variants] = variants.Select(VariantRow).ToList();
+            rows[Tab.Behaviors] = ContentCreator.FindAll<EnemyBehavior>().Select(b => BehaviorRow(b, brains)).ToList();
             rows[Tab.Characters] = ContentCreator.FindAll<CharacterDefinition>().Select(c => Finish(new Row
             {
                 Asset = c, Name = Label(c.displayName, c), Id = c.id, Summary = c.Summary(),
@@ -110,9 +124,69 @@ namespace WhiteDragon
 
         static Row EnemyRow(EnemyDefinition e) => Finish(new Row
         {
-            Asset = e, Name = Label(e.displayName, e), Id = e.id,
-            Summary = $"{e.maxHealth:0.##} hp, speed {e.moveSpeed:0.##}, contact {e.contactDamage} half heart(s)",
+            Asset = e, Name = Label(e.displayName, e), Id = e.id, Rarity = Dash(e.family),
+            TagList = e.tags ?? new string[0], PoolList = e.brain != null ? new[] { e.brain.name } : new[] { "(none: built-in chase)" },
+            Summary = $"{e.movement}, {e.maxHealth:0.##} hp, speed {e.moveSpeed:0.##}, contact {e.contactDamage} half heart(s), threat {e.threatCost}" + (e.isBoss ? ", boss" : ""),
         });
+
+        static Row BrainRow(EnemyBrainDefinition b, List<EnemyDefinition> enemies, List<EnemyVariant> variants)
+        {
+            var sm = b as StateMachineBrain;
+            var users = enemies.Where(e => e.brain == b).Select(e => e.name)
+                .Concat(variants.Where(v => v.brain == b).Select(v => v.name + " (variant)")).ToArray();
+            return Finish(new Row
+            {
+                Asset = b, Name = b.name, Id = sm != null ? "State machine" : "Code: " + b.GetType().Name, Rarity = FolderName(b),
+                TagList = sm != null ? new[] { sm.states.Count.ToString() } : new string[0], PoolList = users,
+                Summary = sm != null ? string.Join("  ", sm.states.Select(StateSummary)) : "Code brain (AI written in C#).",
+            });
+        }
+
+        static string StateSummary(BrainState s)
+        {
+            string behaviors = string.Join("+", s.behaviors.Select(x => x != null ? x.name : "(empty!)"));
+            string exits = string.Join(", ", s.transitions.Select(t => $"{t.condition}{(NeedsValue(t.condition) ? " " + t.value.ToString("0.##") : "")}->{t.target}"));
+            return $"[{s.name}: {(behaviors.Length > 0 ? behaviors : "-")}{(exits.Length > 0 ? " | " + exits : "")}]";
+        }
+
+        static bool NeedsValue(TransitionCondition c) =>
+            c == TransitionCondition.TimeInState || c == TransitionCondition.DistanceToPlayerBelow
+            || c == TransitionCondition.DistanceToPlayerAbove || c == TransitionCondition.HealthBelowPercent;
+
+        static Row VariantRow(EnemyVariant v)
+        {
+            var overrides = new List<string>();
+            if (v.overrideTint) overrides.Add("tint");
+            if (v.visualPrefab != null) overrides.Add("visual");
+            if (v.brain != null) overrides.Add("brain");
+            return Finish(new Row
+            {
+                Asset = v, Name = v.name, Id = v.id, Rarity = v.baseEnemy != null ? v.baseEnemy.name : "(any)",
+                TagList = overrides.ToArray(), PoolList = v.brain != null ? new[] { v.brain.name } : new string[0],
+                Summary = $"hp x{v.healthMultiplier:0.##}, speed x{v.speedMultiplier:0.##}, damage x{v.damageMultiplier:0.##}, size x{v.scaleMultiplier:0.##}, weight {v.weight:0.##}",
+            });
+        }
+
+        static Row BehaviorRow(EnemyBehavior b, List<EnemyBrainDefinition> brains)
+        {
+            var info = EnemyContentCreator.Info(b.GetType());
+            var users = brains.OfType<StateMachineBrain>()
+                .Where(sm => sm.states.Any(s => s.behaviors.Contains(b))).Select(sm => sm.name).ToArray();
+            return Finish(new Row
+            {
+                Asset = b, Name = b.name, Id = b.GetType().Name, Rarity = info?.Category ?? "-",
+                TagList = new[] { FolderName(b) }, PoolList = users.Length > 0 ? users : new[] { "(unused)" },
+                Summary = info?.Description ?? "(no [EnemyBehaviorInfo] description)",
+            });
+        }
+
+        static string FolderName(Object asset)
+        {
+            string path = AssetDatabase.GetAssetPath(asset);
+            return string.IsNullOrEmpty(path) ? "-" : System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(path));
+        }
+
+        static string Dash(string s) => string.IsNullOrEmpty(s) ? "-" : s;
 
         static string Label(string displayName, Object asset) => string.IsNullOrEmpty(displayName) ? asset.name : displayName;
 
@@ -122,7 +196,8 @@ namespace WhiteDragon
             r.Rarity ??= "-";
             r.Tags = r.TagList.Length == 0 ? "-" : string.Join(", ", r.TagList);
             r.Pools = r.PoolList.Length == 0 ? "-" : string.Join(", ", r.PoolList);
-            r.Search = $"{r.Name} {r.Asset.name} {r.Id} {r.Tags}".ToLowerInvariant();
+            // Search covers name, id, tags, and the third column (rarity, family or category).
+            r.Search = $"{r.Name} {r.Asset.name} {r.Id} {r.Tags} {r.Rarity}".ToLowerInvariant();
             return r;
         }
 
@@ -157,7 +232,7 @@ namespace WhiteDragon
             var shown = all.Where(Matches).ToList();
             EditorGUILayout.LabelField($"{shown.Count} shown of {all.Count}", EditorStyles.miniLabel);
 
-            DrawColumns(EditorGUILayout.GetControlRect(), Columns, EditorStyles.boldLabel);
+            DrawColumns(EditorGUILayout.GetControlRect(), TabColumns.TryGetValue(tab, out var headers) ? headers : Columns, EditorStyles.boldLabel);
             scroll = EditorGUILayout.BeginScrollView(scroll);
             foreach (var row in shown) DrawRow(row);
             EditorGUILayout.EndScrollView();
@@ -212,7 +287,10 @@ namespace WhiteDragon
                 case Tab.Synergies: ContentCreator.NewSynergy(); break;
                 case Tab.Effects: ContentCreator.NewShotEffect(); break;
                 case Tab.Statuses: ContentCreator.NewStatus(); break;
-                case Tab.Enemies: ContentCreator.NewEnemy(); break;
+                case Tab.Enemies: EnemyContentCreator.NewEnemy(); break;
+                case Tab.Brains: EnemyContentCreator.NewBrain(); break;
+                case Tab.Variants: EnemyContentCreator.NewVariant(); break;
+                case Tab.Behaviors: EnemyContentCreator.NewBehaviorAsset(); break;
                 case Tab.Characters: ContentCreator.NewCharacter(); break;
             }
         }

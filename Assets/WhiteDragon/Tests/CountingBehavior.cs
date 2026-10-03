@@ -16,7 +16,7 @@ namespace WhiteDragon
         public int finishAfter = -1;
 
         /// <summary>The most recent state object this behavior ran with (tests read counts through it).</summary>
-        public State Last;
+        [System.NonSerialized] public State Last;
 
         protected override void Enter(EnemyContext ctx, State s)
         {
