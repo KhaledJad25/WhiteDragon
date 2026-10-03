@@ -12,7 +12,8 @@ namespace WhiteDragon
     /// <summary>
     /// Runs EVERY enemy definition and variant in EnemyCatalog, one at a time, for 10 simulated seconds against a
     /// scripted player, in a temporary arena scene that is removed afterwards (nothing is saved or left behind).
-    /// Fails on any exception or Debug.LogError/Assert, and on an enemy that neither moves nor changes state.
+    /// Fails on any exception or Debug.LogError/Assert, and on an enemy that neither moves nor changes state in its
+    /// whole run (unless its brain's start state is marked Terminal: idle on purpose).
     /// Reports managed allocations per frame for each enemy. New enemies are picked up automatically.
     /// Debug only (Application.isEditor || Debug.isDebugBuild).
     /// </summary>
@@ -55,7 +56,8 @@ namespace WhiteDragon
         /// temporary scene). Every object the test makes is also destroyed one by one, so passing the open scene and a
         /// no-op close (as the edit-mode test does) leaves it exactly as it was. The active scene is restored.
         /// </summary>
-        public static Report RunAll(Func<Scene> createScene, Action<Scene> closeScene)
+        public static Report RunAll(Func<Scene> createScene, Action<Scene> closeScene,
+            IEnumerable<(EnemyDefinition definition, EnemyVariant variant)> subjects = null)
         {
             var report = new Report();
             if (!(Application.isEditor || Debug.isDebugBuild)) return report;
@@ -72,6 +74,13 @@ namespace WhiteDragon
                 floor.transform.position = Arena + new Vector3(0f, -0.5f, 0f);
                 floor.transform.localScale = new Vector3(60f, 1f, 60f);
 
+                if (subjects != null)
+                {
+                    // An explicit list (tests); otherwise every definition and variant in the catalog.
+                    foreach (var (definition, variant) in subjects)
+                        report.Runs.Add(RunOne(definition, variant, report.Runs.Count));
+                    return report;
+                }
                 foreach (var def in EnemyCatalog.All)
                     report.Runs.Add(RunOne(def, null, report.Runs.Count));
                 foreach (var variant in EnemyCatalog.Variants)
@@ -156,7 +165,10 @@ namespace WhiteDragon
                     run.BytesPerFrame = (double)Math.Max(0L, Profiler.GetMonoUsedSizeLong() - heapAtStart) / Math.Max(1, frames - WarmUp);
                 else
                     run.BytesPerFrame = -1;
-                if (run.Moved < 0.5f && run.States.Count <= 1)
+                // Stuck: no movement and no state change for the whole run, unless its brain is idle on purpose
+                // (its start state is marked Terminal).
+                bool idleOnPurpose = enemy.Brain is StateMachineBrain sm && sm.states.Count > 0 && sm.states[0].terminal;
+                if (run.Moved < 0.5f && run.States.Count <= 1 && !idleOnPurpose)
                     run.Problems.Add("never moved and never changed state");
             }
             catch (Exception e)

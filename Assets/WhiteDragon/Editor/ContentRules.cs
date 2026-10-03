@@ -43,6 +43,9 @@ namespace WhiteDragon
             CheckEnemies(set, issues);
             CheckBrains(set.Brains.OfType<StateMachineBrain>().Where(b => b != null), issues);
             CheckBehaviors(set, issues);
+            foreach (string path in set.MissingScriptAssets)
+                issues.Add(Error("asset.missingscript",
+                    $"{path} uses a script that no longer exists (deleted or renamed class). Restore the script or delete the asset.", null));
             return issues;
         }
 

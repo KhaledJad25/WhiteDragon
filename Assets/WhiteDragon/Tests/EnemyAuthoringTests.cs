@@ -18,6 +18,9 @@ namespace WhiteDragon
                 if (o != null) Object.DestroyImmediate(o);
             cleanup.Clear();
             string folder = EnemyContentCreator.FamilyFolder(TestFamily);
+            // Let any background import of the test assets finish before deleting them (avoids an import-worker race).
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             if (AssetDatabase.IsValidFolder(folder)) AssetDatabase.DeleteAsset(folder);
             EnemyCatalog.Reload();
         }

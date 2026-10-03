@@ -20,6 +20,9 @@ namespace WhiteDragon
         /// <summary>Enemy components in open scenes.</summary>
         public readonly List<Enemy> SceneEnemies = new List<Enemy>();
 
+        /// <summary>Content asset paths that reference a script that no longer exists (deleted or renamed class).</summary>
+        public readonly List<string> MissingScriptAssets = new List<string>();
+
         /// <summary>Asset path per asset. Assets without a path skip the folder check.</summary>
         public readonly Dictionary<Object, string> Paths = new Dictionary<Object, string>();
 
