@@ -98,7 +98,10 @@ namespace WhiteDragon
 
         public float HealthFraction => Stats.MaxHealth > 0f ? Enemy.Health / Stats.MaxHealth : 0f;
 
-        /// <summary>Nothing but the player between this enemy's eyes and the player's body.</summary>
+        /// <summary>
+        /// Nothing but the player between this enemy's eyes and the player's body. Other enemies do not block it,
+        /// since enemy shots fly through them.
+        /// </summary>
         public bool HasLineOfSight()
         {
             if (Target == null) return false;
@@ -111,14 +114,17 @@ namespace WhiteDragon
             {
                 var t = losHits[i].collider.transform;
                 if (t.IsChildOf(Transform) || t.IsChildOf(Target.transform)) continue;
+                var damageable = losHits[i].collider.GetComponentInParent<IDamageable>();
+                if (damageable != null && damageable.Team == Team.Enemy) continue;
                 return false;
             }
             return true;
         }
 
         /// <summary>
-        /// Touching the player: horizontal distance within both body radii plus extraReach, and the height difference
-        /// of their feet no more than this enemy's height. Contact damage and dashes use this.
+        /// Touching the player: horizontal distance within both body radii plus extraReach, and the two bodies'
+        /// heights overlap (gap no more than extraReach), so a flying enemy at chest height touches too.
+        /// Contact damage and dashes use this.
         /// </summary>
         public bool InContactRange(float extraReach)
         {
@@ -126,8 +132,11 @@ namespace WhiteDragon
             float reach = Controller.radius * Transform.lossyScale.x
                           + (targetController != null ? targetController.radius : DefaultTargetRadius) + extraReach;
             if (DistanceToTarget > reach) return false;
-            float verticalGap = Mathf.Abs(TargetPosition.y - Position.y);
-            return verticalGap <= Controller.height;
+            Bounds self = Controller.bounds;
+            float targetBottom = targetController != null ? targetController.bounds.min.y : TargetPosition.y;
+            float targetTop = targetController != null ? targetController.bounds.max.y : TargetPosition.y + 1.8f;
+            float verticalGap = Mathf.Max(self.min.y, targetBottom) - Mathf.Min(self.max.y, targetTop);
+            return verticalGap <= extraReach;
         }
 
         // ---------- Moving ----------

@@ -29,7 +29,8 @@ namespace WhiteDragon
         protected override void Enter(EnemyContext ctx, State s)
         {
             s.StrafeSign = ctx.Random != null && ctx.Random.Chance(RandomStream.Combat, 0.5f) ? -1f : 1f;
-            s.FlipTimer = 0f;
+            // Random first flip so a group does not change direction in step.
+            s.FlipTimer = ctx.Random != null ? ctx.Random.Range(RandomStream.Combat, 0f, strafeFlipInterval) : 0f;
         }
 
         protected override bool Tick(EnemyContext ctx, State s, float dt)

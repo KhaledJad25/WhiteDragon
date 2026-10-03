@@ -34,7 +34,8 @@ namespace WhiteDragon
             Vector3 from = ctx.Position - ctx.TargetPosition;
             s.Angle = Mathf.Atan2(from.z, from.x) * Mathf.Rad2Deg;
             s.Direction = ctx.Random != null && ctx.Random.Chance(RandomStream.Combat, 0.5f) ? -1f : 1f;
-            s.Time = 0f;
+            // Random bob phase so a flock does not bob in step.
+            s.Time = ctx.Random != null && bobFrequency > 0f ? ctx.Random.Range(RandomStream.Combat, 0f, 1f / bobFrequency) : 0f;
         }
 
         protected override bool Tick(EnemyContext ctx, State s, float dt)

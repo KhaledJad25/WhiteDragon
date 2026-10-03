@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18b4c8d2bec14b1408a20434a1452b0e, type: 3}
+  m_Name: Bat_Brain
+  m_EditorClassIdentifier: WhiteDragon.Runtime::WhiteDragon.StateMachineBrain
+  states:
+  - name: Hover
+    behaviors:
+    - {fileID: 11400000, guid: eacf8b3da87c5444f9586bbb70cb35c9, type: 2}
+    transitions:
+    - condition: 0
+      value: 1.5
+      target: Telegraph
+  - name: Telegraph
+    behaviors:
+    - {fileID: 11400000, guid: 9a5f7daa05076c546a3099101520e6c2, type: 2}
+    transitions:
+    - condition: 3
+      value: 0
+      target: Dash
+  - name: Dash
+    behaviors:
+    - {fileID: 11400000, guid: b0f8365bbaaa370458763a1ddefc7095, type: 2}
+    transitions:
+    - condition: 3
+      value: 0
+      target: Recover
+  - name: Recover
+    behaviors:
+    - {fileID: 11400000, guid: eacf8b3da87c5444f9586bbb70cb35c9, type: 2}
+    transitions:
+    - condition: 0
+      value: 0.8
+      target: Hover

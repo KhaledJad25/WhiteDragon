@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18b4c8d2bec14b1408a20434a1452b0e, type: 3}
+  m_Name: Skeleton_Elite_Brain
+  m_EditorClassIdentifier: WhiteDragon.Runtime::WhiteDragon.StateMachineBrain
+  states:
+  - name: Hold
+    behaviors:
+    - {fileID: 11400000, guid: b0be470c31e657e40a297922a985acae, type: 2}
+    transitions:
+    - condition: 0
+      value: 1.5
+      target: Aim
+  - name: Aim
+    behaviors: []
+    transitions:
+    - condition: 6
+      value: 0
+      target: Telegraph
+    - condition: 7
+      value: 0
+      target: Reposition
+  - name: Reposition
+    behaviors:
+    - {fileID: 11400000, guid: 7e8b98cab6bc00f41b2cd3b39a5c3216, type: 2}
+    transitions:
+    - condition: 6
+      value: 0
+      target: Hold
+  - name: Telegraph
+    behaviors:
+    - {fileID: 11400000, guid: 2192c8b37f2524b4994cb998a3f616a0, type: 2}
+    transitions:
+    - condition: 3
+      value: 0
+      target: Check
+  - name: Check
+    behaviors: []
+    transitions:
+    - condition: 6
+      value: 0
+      target: Shoot
+    - condition: 7
+      value: 0
+      target: Reposition
+  - name: Shoot
+    behaviors:
+    - {fileID: 11400000, guid: b7a2c7c18622f074b8c78d5d30938b19, type: 2}
+    transitions:
+    - condition: 3
+      value: 0
+      target: Recover
+  - name: Recover
+    behaviors:
+    - {fileID: 11400000, guid: 48e3a179e15a15e45afdaa10bcd3aa17, type: 2}
+    transitions:
+    - condition: 3
+      value: 0
+      target: Hold
