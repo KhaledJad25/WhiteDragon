@@ -32,6 +32,8 @@ Content must be EASY to add, change, and remove in the Unity Editor, by a human 
 - Keyboard and mouse only. Input actions are created in code. HUD and debug panel use OnGUI. Do not use UI Toolkit or UI Builder.
 - Editor-only authoring tools go in Assets/WhiteDragon/Editor and must never change runtime behavior.
 - Summary() methods are for editor and debug tools only. Never show them in player-facing UI, since they can mention unlock requirements.
+- Telegraph rule: any behavior that initiates an attack must be preceded by a Telegraph. Passive contact damage (MeleeContact on a body that is always dangerous, like the zombie) is exempt.
+- Enemies with no brain still use the old built-in chase. Once every definition has a brain, delete that path.
 
 ## Progression rules (hidden progression)
 
