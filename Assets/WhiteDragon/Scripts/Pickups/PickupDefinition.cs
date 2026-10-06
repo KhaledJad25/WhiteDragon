@@ -20,7 +20,7 @@ namespace WhiteDragon
         public string[] tags = new string[0];
 
         [Header("Effects")]
-        [Tooltip("Applied in order when collected. The pickup is taken if at least one effect applies.")]
+        [Tooltip("Applied in order when collected. A pickup is taken if at least one effect applies; effects that refuse are lost.")]
         public List<PickupEffect> effects = new List<PickupEffect>();
 
         [Header("Art (optional; empty = placeholder)")]

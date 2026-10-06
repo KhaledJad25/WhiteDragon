@@ -42,6 +42,16 @@ namespace WhiteDragon
         int pendingSpawn = -1;
         bool pendingKillAll;
 
+        // Pickups: spawn at crosshair (1 or 50), wallet, health to half, live count against the cap.
+        PlayerWallet wallet;
+        PickupDefinition[] pickupDefinitions;
+        string pickupSearch = "";
+        string pickupMessage = "";
+        Vector2 pickupScroll;
+        PickupDefinition pendingPickup;
+        int pendingPickupCount;
+        bool pendingHalfHealth;
+
         /// <summary>Parses a typed seed. Rejects empty, non-numeric, overflowing and zero input.</summary>
         public static bool TryParseSeed(string text, out int seed)
         {
@@ -49,10 +59,53 @@ namespace WhiteDragon
             return !string.IsNullOrWhiteSpace(text) && int.TryParse(text.Trim(), out seed) && seed != 0;
         }
 
+        /// <summary>Pickups whose id, display name or a tag contains the query (case-insensitive). Empty query = all.</summary>
+        public static List<PickupDefinition> FilterPickups(IEnumerable<PickupDefinition> pickups, string query)
+        {
+            string q = (query ?? "").Trim();
+            var result = new List<PickupDefinition>();
+            foreach (var p in pickups)
+            {
+                if (p == null) continue;
+                if (q.Length == 0 || Contains(p.id, q) || Contains(p.displayName, q) || (p.tags != null && p.tags.Any(t => Contains(t, q))))
+                    result.Add(p);
+            }
+            return result;
+        }
+
+        static bool Contains(string text, string query) => text != null && text.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
+
+        /// <summary>
+        /// Debug: red health to half its containers (at least half a heart), keeping soul and dark hearts. Damage
+        /// would take the overlay first, so the overlay is saved and added back. False while invincible or dead.
+        /// </summary>
+        public static bool SetRedToHalf(HealthState state, float now)
+        {
+            if (state.IsDead) return false;
+            int target = Math.Max(1, state.MaxRed / 2);
+            if (state.Red < target)
+            {
+                state.Heal(target - state.Red);
+                return true;
+            }
+            if (state.Red == target) return true;
+            var saved = state.Overlay.Select(h => (h.Kind, h.Halves)).ToList();
+            int overlay = saved.Sum(h => h.Halves);
+            if (!state.TryDamage(overlay + state.Red - target, now)) return false;
+            foreach (var (kind, halves) in saved)
+            {
+                if (kind == HeartKind.Dark) state.AddDark(halves);
+                else state.AddSoul(halves);
+            }
+            return true;
+        }
+
         void Awake()
         {
             statuses = Resources.LoadAll<StatusEffectDefinition>("Statuses")
                 .OrderBy(s => s.id ?? "", StringComparer.Ordinal).ToArray();
+            pickupDefinitions = Resources.LoadAll<PickupDefinition>("Pickups")
+                .OrderBy(p => p.id ?? "", StringComparer.Ordinal).ToArray();
             poolCounts = ItemCatalog.CountByPool();
             foreach (var d in EnemyCatalog.All)
                 spawnOptions.Add((d, null, d.displayName));
@@ -93,6 +146,18 @@ namespace WhiteDragon
                 if (inventory == null) inventory = stats.GetComponent<PlayerInventory>();
                 if (health == null) health = stats.GetComponent<PlayerHealth>();
                 if (thrower == null) thrower = stats.GetComponent<RockThrower>();
+                if (wallet == null) wallet = stats.GetComponent<PlayerWallet>();
+            }
+            if (pendingPickup != null)
+            {
+                SpawnPickupsAtCrosshair(pendingPickup, pendingPickupCount);
+                pendingPickup = null;
+            }
+            if (pendingHalfHealth)
+            {
+                pendingHalfHealth = false;
+                if (health != null)
+                    pickupMessage = SetRedToHalf(health.State, Time.time) ? $"Red health set to {health.State.Red}/{health.State.MaxRed}." : "Could not (invincible or dead); try again.";
             }
             if (pendingSeed.HasValue)
             {
@@ -120,17 +185,37 @@ namespace WhiteDragon
             }
         }
 
-        /// <summary>Spawns where the crosshair points (on the floor, or hovering for flyers). Debug key namespace, no room.</summary>
-        void SpawnAtCrosshair((EnemyDefinition definition, EnemyVariant variant, string label) option)
+        /// <summary>The floor where the crosshair points (8 m ahead if it points at nothing). False without a camera.</summary>
+        static bool CrosshairFloorPoint(out Vector3 point)
         {
+            point = Vector3.zero;
             var cam = Camera.main;
-            if (cam == null) { enemyMessage = "No camera."; return; }
+            if (cam == null) return false;
             var ray = new Ray(cam.transform.position, cam.transform.forward);
-            Vector3 point = Physics.Raycast(ray, out var hit, 40f, ~0, QueryTriggerInteraction.Ignore)
+            point = Physics.Raycast(ray, out var hit, 40f, ~0, QueryTriggerInteraction.Ignore)
                 ? hit.point + hit.normal * 0.6f
                 : ray.GetPoint(8f);
             if (Physics.Raycast(point + Vector3.up, Vector3.down, out var floor, 50f, ~0, QueryTriggerInteraction.Ignore))
                 point = floor.point;
+            return true;
+        }
+
+        /// <summary>Spawns count pickups at the crosshair through the one spawn helper (they hop apart).</summary>
+        void SpawnPickupsAtCrosshair(PickupDefinition definition, int count)
+        {
+            if (!CrosshairFloorPoint(out var point)) { pickupMessage = "No camera."; return; }
+            int spawned = 0;
+            for (int i = 0; i < count; i++)
+                if (PickupManager.Spawn(definition, point + Vector3.up * 0.3f) != null) spawned++;
+            pickupMessage = spawned > 0
+                ? $"Spawned {spawned} {definition.id}."
+                : $"{definition.id} is locked (needs unlock '{definition.requiredUnlockId}').";
+        }
+
+        /// <summary>Spawns where the crosshair points (on the floor, or hovering for flyers). Debug key namespace, no room.</summary>
+        void SpawnAtCrosshair((EnemyDefinition definition, EnemyVariant variant, string label) option)
+        {
+            if (!CrosshairFloorPoint(out var point)) { enemyMessage = "No camera."; return; }
             if (option.definition.movement == MovementMode.Flying) point += Vector3.up * 1.5f;
             var enemy = EnemySpawner.Spawn(option.definition, option.variant, point, EnemySpawner.NextDebugKey());
             enemyMessage = $"Spawned {option.label} ({enemy.SpawnKey}).";
@@ -187,6 +272,7 @@ namespace WhiteDragon
             GUILayout.Label("DEBUG (F1 to close)", headerStyle);
             DrawRun();
             DrawEnemies();
+            DrawPickups();
             DrawStress();
             DrawStats();
             DrawRecipe();
@@ -342,6 +428,44 @@ namespace WhiteDragon
             }
             GUILayout.EndScrollView();
             if (enemyMessage.Length > 0) GUILayout.Label(enemyMessage);
+        }
+
+        void DrawPickups()
+        {
+            Header("Pickups");
+            GUILayout.Label($"Live {PickupManager.LiveCount} / cap {PickupManager.MaxPickups}   recycled {PickupManager.RecycledByCap}   collected {PickupManager.CollectedCount}");
+            if (wallet != null)
+            {
+                foreach (var c in wallet.Currencies)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label($"{c.displayName}: {wallet.Get(c.id)}{(c.maxAmount > 0 ? $"/{c.maxAmount}" : "")}", GUILayout.Width(120f));
+                    if (GUILayout.Button("+1")) wallet.Add(c.id, 1);
+                    if (GUILayout.Button("+10")) wallet.Add(c.id, 10);
+                    if (GUILayout.Button("Spend 1") && !wallet.TrySpend(c.id, 1)) pickupMessage = $"Not enough {c.displayName}.";
+                    if (GUILayout.Button("Spend 10") && !wallet.TrySpend(c.id, 10)) pickupMessage = $"Not enough {c.displayName}.";
+                    GUILayout.EndHorizontal();
+                }
+            }
+            else GUILayout.Label("(no wallet)");
+            if (GUILayout.Button("Red health to half (test heart refusal)")) pendingHalfHealth = true;
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Spawn at crosshair:", GUILayout.Width(130f));
+            pickupSearch = GUILayout.TextField(pickupSearch);
+            GUILayout.EndHorizontal();
+            if (pickupDefinitions.Length == 0) GUILayout.Label("(no pickup assets in Data/Resources/Pickups)");
+            pickupScroll = GUILayout.BeginScrollView(pickupScroll, GUILayout.Height(110f));
+            foreach (var p in FilterPickups(pickupDefinitions, pickupSearch))
+            {
+                GUILayout.BeginHorizontal();
+                string label = string.IsNullOrEmpty(p.displayName) ? p.id : p.displayName;
+                if (GUILayout.Button(p.IsUnlocked ? label : label + " (locked)")) { pendingPickup = p; pendingPickupCount = 1; }
+                if (GUILayout.Button("Spawn 50", GUILayout.Width(80f))) { pendingPickup = p; pendingPickupCount = 50; }
+                GUILayout.EndHorizontal();
+            }
+            GUILayout.EndScrollView();
+            if (pickupMessage.Length > 0) GUILayout.Label(pickupMessage);
         }
 
         /// <summary>Each awake enemy's brain state above its head (debug).</summary>
