@@ -30,6 +30,10 @@ namespace WhiteDragon
             public float Moved;
             public readonly List<string> States = new List<string>();
             public double BytesPerFrame;
+            /// <summary>Frames measured for allocations: alive, after the one-second warm-up.</summary>
+            public int MeasuredFrames;
+            /// <summary>Managed heap growth over the measured frames (-1 when a garbage collection ran).</summary>
+            public long HeapGrowthBytes;
             public bool Passed => Problems.Count == 0;
         }
 
@@ -141,8 +145,10 @@ namespace WhiteDragon
                 const int WarmUp = 60; // the first second includes one-time setup (brain state, pooled shots)
                 long heapAtStart = 0;
                 int collectionsAtStart = 0;
+                int ticked = 0;
                 for (int i = 0; i < frames && !enemy.IsDead; i++)
                 {
+                    ticked++;
                     if (i == WarmUp)
                     {
                         heapAtStart = Profiler.GetMonoUsedSizeLong();
@@ -159,12 +165,20 @@ namespace WhiteDragon
                         if (!run.States.Contains(state)) run.States.Add(state);
                     }
                 }
-                // Managed heap growth over the steady frames. The heap grows in blocks, so this resolves to about
-                // 8 bytes per frame over 540 frames; a garbage collection in between makes it unusable (reported).
-                if (GC.CollectionCount(0) == collectionsAtStart)
-                    run.BytesPerFrame = (double)Math.Max(0L, Profiler.GetMonoUsedSizeLong() - heapAtStart) / Math.Max(1, frames - WarmUp);
-                else
+                // Managed heap growth over the frames it was alive after the warm-up, divided by those frames. The
+                // heap grows in blocks (about 4 KB), so over 540 frames this resolves to about 8 bytes per frame;
+                // a garbage collection in between, or dying during the warm-up, makes it unusable (reported).
+                run.MeasuredFrames = Math.Max(0, ticked - WarmUp);
+                if (run.MeasuredFrames == 0 || GC.CollectionCount(0) != collectionsAtStart)
+                {
+                    run.HeapGrowthBytes = -1;
                     run.BytesPerFrame = -1;
+                }
+                else
+                {
+                    run.HeapGrowthBytes = Math.Max(0L, Profiler.GetMonoUsedSizeLong() - heapAtStart);
+                    run.BytesPerFrame = (double)run.HeapGrowthBytes / run.MeasuredFrames;
+                }
                 // Stuck: no movement and no state change for the whole run, unless its brain is idle on purpose
                 // (its start state is marked Terminal).
                 bool idleOnPurpose = enemy.Brain is StateMachineBrain sm && sm.states.Count > 0 && sm.states[0].terminal;

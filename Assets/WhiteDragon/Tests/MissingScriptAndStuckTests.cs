@@ -93,5 +93,29 @@ namespace WhiteDragon
             Assert.IsTrue(report.Runs[1].Passed, "its start state is marked Terminal: idle on purpose");
             Assert.IsFalse(report.Passed);
         }
+
+        [Test]
+        public void SmokeTest_AllocationIsPerLivingFrame()
+        {
+            AllocateThenDieBehavior.Kept.Clear();
+            var behavior = ScriptableObject.CreateInstance<AllocateThenDieBehavior>();
+            behavior.bytesPerTick = 512;
+            behavior.dieAfter = 200;
+            cleanup.Add(behavior);
+            var brain = ScriptableObject.CreateInstance<StateMachineBrain>();
+            brain.states.Add(new BrainState { name = "Leak", behaviors = new List<EnemyBehavior> { behavior }, terminal = true });
+            cleanup.Add(brain);
+            var def = Definition("leaker", brain);
+
+            var scene = SceneManager.GetActiveScene();
+            var report = EnemySmokeTest.RunAll(() => scene, _ => { }, new[] { (def, (EnemyVariant)null) });
+            AllocateThenDieBehavior.Kept.Clear();
+            var run = report.Runs[0];
+
+            Assert.AreEqual(200 - 60, run.MeasuredFrames, "alive frames after the one-second warm-up");
+            Assert.Greater(run.HeapGrowthBytes, 0, "measured (no garbage collection during the run)");
+            Assert.AreEqual((double)run.HeapGrowthBytes / run.MeasuredFrames, run.BytesPerFrame, 1e-6, "divided by the frames it was alive");
+            Assert.GreaterOrEqual(run.BytesPerFrame, 512.0, "it allocates at least 512 bytes every frame it lives");
+        }
     }
 }
