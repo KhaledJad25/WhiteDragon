@@ -16,6 +16,10 @@ namespace WhiteDragon
         [Tooltip("Door blockers: their colliders and renderers are on while the room is sealed.")]
         public List<GameObject> doors = new List<GameObject>();
         public ItemPedestal rewardPedestal;
+        [Tooltip("Rolled once when the room is cleared (always rolls; player drop modifiers still apply). Empty = none.")]
+        public DropTableDefinition rewardTable;
+        [Tooltip("Where the reward pickups appear. Empty = the room's center.")]
+        public Transform rewardSpawnPoint;
 
         readonly RoomProgress progress = new RoomProgress();
         bool initialized;
@@ -62,7 +66,20 @@ namespace WhiteDragon
             if (!progress.Update(AliveCount())) return;
             SetDoorsClosed(false);
             if (rewardPedestal != null) rewardPedestal.gameObject.SetActive(true);
+            if (rewardTable != null) SpawnReward(DropContext.FromScene());
             RunSession.NotifyRoomCleared(Id);
+        }
+
+        /// <summary>
+        /// Rolls the reward table once from the room's own generator ("&lt;roomId&gt;:reward") and spawns the result at
+        /// the reward point. Returns how many pickups spawned.
+        /// </summary>
+        public int SpawnReward(DropContext context)
+        {
+            var run = RunSession.Rng ?? new RunRandom(RunSession.Seed);
+            var drops = DropRoller.Roll(rewardTable, 1f, run.Derive(DropRoller.RoomKey(Id)), context);
+            Vector3 at = rewardSpawnPoint != null ? rewardSpawnPoint.position : transform.position;
+            return EnemyDrops.SpawnAll(drops, at);
         }
 
         public int AliveCount()

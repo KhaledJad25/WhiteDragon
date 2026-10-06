@@ -11,5 +11,7 @@ namespace WhiteDragon
         ProjectileSpeed,
         Range,
         Luck,
+        /// <summary>Multiplies enemy drop chances (base 1; a PercentAdd of 0.25 = +25%).</summary>
+        DropRate,
     }
 }

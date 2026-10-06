@@ -30,6 +30,10 @@ namespace WhiteDragon
         [Tooltip("Shot effect assets added while active. No empty slots.")]
         public List<ShotEffect> effects = new List<ShotEffect>();
 
+        [Header("Drops")]
+        [Tooltip("While active, multiply the drop weight of pickups with a tag (\"nothing\" = chance of no drop).")]
+        public DropModifier[] dropModifiers = new DropModifier[0];
+
         /// <summary>One line describing when it activates and what it does, for tools and debugging.</summary>
         public string Summary()
         {

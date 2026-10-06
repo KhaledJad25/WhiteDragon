@@ -43,6 +43,10 @@ namespace WhiteDragon
         [Tooltip("Model floating on the pedestal, replacing the rarity-colored sphere. Centered on its pivot, about 0.5 m across. Empty = sphere.")]
         public GameObject worldPrefab;
 
+        [Header("Drops")]
+        [Tooltip("While held, multiply the drop weight of pickups with a tag (\"coin\" x2 = coins twice as likely; \"nothing\" = chance of no drop).")]
+        public DropModifier[] dropModifiers = new DropModifier[0];
+
         /// <summary>One line describing what the item does, for tools and debugging.</summary>
         public string Summary()
         {

@@ -49,5 +49,12 @@ namespace WhiteDragon
         [Tooltip("The enemy's AI (a StateMachineBrain asset or a code brain). Empty = the built-in chase-and-touch of the first enemies.")]
         public EnemyBrainDefinition brain;
         public MovementMode movement = MovementMode.Ground;
+
+        [Header("Drops")]
+        [Tooltip("What it can drop when it dies (bosses use the same fields). Empty = nothing.")]
+        public DropTableDefinition dropTable;
+        [Tooltip("Chance to roll the table on death (0 to 1), before the variant multiplier and the player's DropRate.")]
+        [Range(0f, 1f)]
+        public float dropChance;
     }
 }

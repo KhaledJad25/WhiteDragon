@@ -52,6 +52,15 @@ namespace WhiteDragon
         int pendingPickupCount;
         bool pendingHalfHealth;
 
+        // Drops: roll a table N times for a seed with the player's current modifiers; chances and multipliers.
+        DropTableDefinition[] dropTables;
+        int dropTableIndex;
+        string dropSeedText = "1";
+        string dropTimesText = "1000";
+        bool pendingDropRoll;
+        string dropResult = "";
+        PlayerDropModifiers dropModifiers;
+
         /// <summary>Parses a typed seed. Rejects empty, non-numeric, overflowing and zero input.</summary>
         public static bool TryParseSeed(string text, out int seed)
         {
@@ -71,6 +80,28 @@ namespace WhiteDragon
                     result.Add(p);
             }
             return result;
+        }
+
+        /// <summary>
+        /// Rolls a table times times (each roll from its own generator, derived from the seed and the roll number, like a
+        /// source's repeat rolls) and counts what came out: "nothing" plus each pickup id, most frequent first.
+        /// </summary>
+        public static List<(string label, int count)> RollDistribution(DropTableDefinition table, int seed, int times, DropContext context)
+        {
+            var counts = new Dictionary<string, int>();
+            var run = new RunRandom(seed);
+            for (int i = 0; i < times; i++)
+            {
+                var drops = DropRoller.Roll(table, 1f, run.Derive(DropRoller.RoomKey("debug_roll", i)), context);
+                if (drops.Count == 0) counts["nothing"] = counts.TryGetValue("nothing", out int n) ? n + 1 : 1;
+                foreach (var (pickup, count) in drops)
+                {
+                    string id = pickup != null ? pickup.id : "(missing)";
+                    counts[id] = (counts.TryGetValue(id, out int c) ? c : 0) + count;
+                }
+            }
+            return counts.Select(kv => (kv.Key, kv.Value))
+                .OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).ToList();
         }
 
         static bool Contains(string text, string query) => text != null && text.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
@@ -106,6 +137,8 @@ namespace WhiteDragon
                 .OrderBy(s => s.id ?? "", StringComparer.Ordinal).ToArray();
             pickupDefinitions = Resources.LoadAll<PickupDefinition>("Pickups")
                 .OrderBy(p => p.id ?? "", StringComparer.Ordinal).ToArray();
+            dropTables = Resources.LoadAll<DropTableDefinition>("DropTables")
+                .OrderBy(t => t.id ?? "", StringComparer.Ordinal).ToArray();
             poolCounts = ItemCatalog.CountByPool();
             foreach (var d in EnemyCatalog.All)
                 spawnOptions.Add((d, null, d.displayName));
@@ -147,6 +180,12 @@ namespace WhiteDragon
                 if (health == null) health = stats.GetComponent<PlayerHealth>();
                 if (thrower == null) thrower = stats.GetComponent<RockThrower>();
                 if (wallet == null) wallet = stats.GetComponent<PlayerWallet>();
+                if (dropModifiers == null) dropModifiers = stats.GetComponent<PlayerDropModifiers>();
+            }
+            if (pendingDropRoll)
+            {
+                pendingDropRoll = false;
+                RollSelectedTable();
             }
             if (pendingPickup != null)
             {
@@ -212,6 +251,21 @@ namespace WhiteDragon
                 : $"{definition.id} is locked (needs unlock '{definition.requiredUnlockId}').";
         }
 
+        void RollSelectedTable()
+        {
+            if (dropTables.Length == 0) { dropResult = "No drop tables."; return; }
+            if (!int.TryParse(dropSeedText.Trim(), out int seed) || !int.TryParse(dropTimesText.Trim(), out int times) || times < 1 || times > 100000)
+            {
+                dropResult = "Seed must be a number and times 1 to 100000.";
+                return;
+            }
+            var table = dropTables[Mathf.Clamp(dropTableIndex, 0, dropTables.Length - 1)];
+            var context = stats != null ? DropContext.FromPlayer(stats.gameObject) : new DropContext();
+            var lines = RollDistribution(table, seed, times, context)
+                .Select(r => $"{r.label}: {r.count} ({100f * r.count / times:0.#} per 100 rolls)");
+            dropResult = $"{table.id} x{times}, seed {seed}, luck {context.Luck:0.##}, hurt {context.PlayerHurt}:\n" + string.Join("\n", lines);
+        }
+
         /// <summary>Spawns where the crosshair points (on the floor, or hovering for flyers). Debug key namespace, no room.</summary>
         void SpawnAtCrosshair((EnemyDefinition definition, EnemyVariant variant, string label) option)
         {
@@ -273,6 +327,7 @@ namespace WhiteDragon
             DrawRun();
             DrawEnemies();
             DrawPickups();
+            DrawDrops();
             DrawStress();
             DrawStats();
             DrawRecipe();
@@ -466,6 +521,32 @@ namespace WhiteDragon
             }
             GUILayout.EndScrollView();
             if (pickupMessage.Length > 0) GUILayout.Label(pickupMessage);
+        }
+
+        void DrawDrops()
+        {
+            Header("Drops");
+            float dropRate = stats != null ? stats.Stats.Get(StatType.DropRate) : 1f;
+            GUILayout.Label($"DropRate stat {dropRate:0.##}");
+            var tags = dropModifiers != null ? dropModifiers.Multipliers : null;
+            GUILayout.Label("Tag multipliers: " + (tags == null || tags.Count == 0 ? "-" : string.Join(", ", tags.Select(kv => $"{kv.Key} x{kv.Value:0.##}"))));
+            foreach (var d in EnemyCatalog.All)
+                if (d.dropTable != null)
+                    GUILayout.Label($"   {d.displayName}: {100f * DropRoller.EnemyDropChance(d, null, dropRate):0.#}% ({d.dropTable.id})");
+
+            if (dropTables.Length == 0) { GUILayout.Label("(no drop tables in Data/Resources/DropTables)"); return; }
+            GUILayout.BeginHorizontal();
+            for (int i = 0; i < dropTables.Length; i++)
+                if (GUILayout.Toggle(dropTableIndex == i, dropTables[i].id, GUI.skin.button)) dropTableIndex = i;
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Seed", GUILayout.Width(36f));
+            dropSeedText = GUILayout.TextField(dropSeedText, 11, GUILayout.Width(90f));
+            GUILayout.Label("Times", GUILayout.Width(40f));
+            dropTimesText = GUILayout.TextField(dropTimesText, 6, GUILayout.Width(60f));
+            if (GUILayout.Button("Roll table N times")) pendingDropRoll = true;
+            GUILayout.EndHorizontal();
+            if (dropResult.Length > 0) GUILayout.Label(dropResult);
         }
 
         /// <summary>Each awake enemy's brain state above its head (debug).</summary>

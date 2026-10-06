@@ -43,6 +43,7 @@ namespace WhiteDragon
                 case StatType.ProjectileSpeed: return 18f;
                 case StatType.Range: return 20f;
                 case StatType.Luck: return 0f;
+                case StatType.DropRate: return 1f;
                 default: return 0f;
             }
         }

@@ -19,6 +19,9 @@ namespace WhiteDragon
         {
             if (character == null) return;
 
+            var dropModifiers = GetComponent<PlayerDropModifiers>();
+            if (dropModifiers != null) dropModifiers.SetCharacter(character);
+
             var stats = GetComponent<PlayerStats>().Stats;
             if (character.statOverrides != null)
                 foreach (var o in character.statOverrides)

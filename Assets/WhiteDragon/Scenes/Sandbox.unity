@@ -3239,6 +3239,8 @@ MonoBehaviour:
   doors:
   - {fileID: 876497147}
   rewardPedestal: {fileID: 1329133321}
+  rewardTable: {fileID: 11400000, guid: 462c25b1502cc23439d6de500613ab24, type: 2}
+  rewardSpawnPoint: {fileID: 0}
 --- !u!65 &1110552508
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -3886,6 +3888,7 @@ GameObject:
   - component: {fileID: 1203007922}
   - component: {fileID: 1203007925}
   - component: {fileID: 1203007924}
+  - component: {fileID: 1203007926}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -4130,6 +4133,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WhiteDragon.Runtime::WhiteDragon.PlayerWallet
   currencies: []
+--- !u!114 &1203007926
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1203007910}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81219096ef809d04a933a5e8ba668902, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: WhiteDragon.Runtime::WhiteDragon.PlayerDropModifiers
 --- !u!1 &1207798629
 GameObject:
   m_ObjectHideFlags: 0
@@ -4711,6 +4726,8 @@ MonoBehaviour:
   doors:
   - {fileID: 1448401116}
   rewardPedestal: {fileID: 416640258}
+  rewardTable: {fileID: 11400000, guid: 462c25b1502cc23439d6de500613ab24, type: 2}
+  rewardSpawnPoint: {fileID: 0}
 --- !u!65 &1374820620
 BoxCollider:
   m_ObjectHideFlags: 0

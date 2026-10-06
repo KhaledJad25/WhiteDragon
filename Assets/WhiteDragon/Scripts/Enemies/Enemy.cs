@@ -69,6 +69,8 @@ namespace WhiteDragon
         public string DebugLabel => ctx != null ? ctx.DebugLabel : "";
 
         public event Action<Enemy> Died;
+        /// <summary>Any enemy died, right after its own Died event (drops listen here).</summary>
+        public static event Action<Enemy> AnyDied;
         /// <summary>Health fell below a fraction registered with AddHealthThreshold (fires once per threshold).</summary>
         public event Action<Enemy, float> HealthThresholdCrossed;
 
@@ -89,6 +91,7 @@ namespace WhiteDragon
         {
             live.Clear();
             FreezeAI = false;
+            AnyDied = null;
         }
 
         void Awake() => Initialize();
@@ -310,6 +313,7 @@ namespace WhiteDragon
             events.Raise(ActorState.Die);
             GameFeel.OnKill(transform.position + Vector3.up, stats.Tint);
             Died?.Invoke(this);
+            AnyDied?.Invoke(this);
             if (!Application.isPlaying) return;
 
             float delay = definition != null ? definition.deathDelay : 0f;

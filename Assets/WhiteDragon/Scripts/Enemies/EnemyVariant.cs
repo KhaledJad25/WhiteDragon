@@ -34,5 +34,11 @@ namespace WhiteDragon
         [Header("Rolling")]
         [Tooltip("Relative chance when variants are rolled later.")]
         [Min(0f)] public float weight = 1f;
+
+        [Header("Drops")]
+        [Tooltip("Empty = the base enemy's drop table.")]
+        public DropTableDefinition dropTable;
+        [Tooltip("Multiplies the base enemy's drop chance. 1 = no change.")]
+        [Min(0f)] public float dropChanceMultiplier = 1f;
     }
 }

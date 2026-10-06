@@ -36,6 +36,10 @@ namespace WhiteDragon
         [Tooltip("Placeholder color for this character (not shown yet: the player is first-person with no body).")]
         public Color tint = new Color(0.8f, 0.75f, 0.7f);
 
+        [Header("Drops")]
+        [Tooltip("For the whole run, multiply the drop weight of pickups with a tag (\"nothing\" = chance of no drop). Change the drop chance itself through a DropRate stat override.")]
+        public DropModifier[] dropModifiers = new DropModifier[0];
+
         /// <summary>One line describing the character, for tools and debugging.</summary>
         public string Summary()
         {

@@ -29,3 +29,5 @@ MonoBehaviour:
   isBoss: 0
   brain: {fileID: 11400000, guid: 74f3f7840bb39dd4584be8780c5b3b6d, type: 2}
   movement: 0
+  dropTable: {fileID: 11400000, guid: f9ba3e4bc28de0e4ca56831baf6f9d33, type: 2}
+  dropChance: 0.2

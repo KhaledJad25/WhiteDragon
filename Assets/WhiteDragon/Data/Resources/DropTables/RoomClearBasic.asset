@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e95fe0c7d28fe24db8a72fa760a2d47, type: 3}
+  m_Name: RoomClearBasic
+  m_EditorClassIdentifier: WhiteDragon.Runtime::WhiteDragon.DropTableDefinition
+  id: room_clear_basic
+  entries:
+  - pickup: {fileID: 11400000, guid: 47303ca1628b2ae48a1a1bb0be2ffe46, type: 2}
+    weight: 4
+    minCount: 1
+    maxCount: 3
+    condition: 0
+  - pickup: {fileID: 11400000, guid: 2bc3ee06e639f24418b7b20328559d54, type: 2}
+    weight: 1
+    minCount: 1
+    maxCount: 1
+    condition: 0
+  - pickup: {fileID: 11400000, guid: 924a38e062dad06448c941f26a353b2d, type: 2}
+    weight: 2
+    minCount: 1
+    maxCount: 1
+    condition: 0
+  - pickup: {fileID: 11400000, guid: 9df262adf915e554da4e7bcb71cbeb54, type: 2}
+    weight: 1
+    minCount: 1
+    maxCount: 1
+    condition: 0
+  - pickup: {fileID: 11400000, guid: b92e20fddcb00f5428d8c63294101b61, type: 2}
+    weight: 2
+    minCount: 1
+    maxCount: 1
+    condition: 1
+  - pickup: {fileID: 11400000, guid: 30b164e27eb754a448d126be0a1fb5bb, type: 2}
+    weight: 2
+    minCount: 1
+    maxCount: 1
+    condition: 1
+  nothingWeight: 1
+  rolls: 1
