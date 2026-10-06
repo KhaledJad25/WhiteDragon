@@ -153,7 +153,13 @@ namespace WhiteDragon
             }
         }
 
-        void Update() => Tick(Time.deltaTime);
+        static readonly Unity.Profiling.ProfilerMarker TickMarker =
+            new Unity.Profiling.ProfilerMarker(Unity.Profiling.ProfilerCategory.Scripts, "WD.Projectile.Tick");
+
+        void Update()
+        {
+            using (TickMarker.Auto()) Tick(Time.deltaTime);
+        }
 
         public void Tick(float dt)
         {

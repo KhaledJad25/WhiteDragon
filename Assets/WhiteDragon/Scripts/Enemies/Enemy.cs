@@ -185,7 +185,13 @@ namespace WhiteDragon
             ctx.Random = run.Derive(SpawnKey);
         }
 
-        void Update() => Tick(Time.deltaTime);
+        static readonly Unity.Profiling.ProfilerMarker TickMarker =
+            new Unity.Profiling.ProfilerMarker(Unity.Profiling.ProfilerCategory.Scripts, "WD.Enemy.Tick");
+
+        void Update()
+        {
+            using (TickMarker.Auto()) Tick(Time.deltaTime);
+        }
 
         /// <summary>One frame of AI, movement and contact damage (Update calls this every frame).</summary>
         public void Tick(float dt)

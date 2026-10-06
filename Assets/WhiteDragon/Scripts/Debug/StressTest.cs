@@ -53,7 +53,30 @@ namespace WhiteDragon
             ("Physics", "Physics.OverlapSphere", "OverlapSphere"),
             ("Other", "Destroy", "Destroy"),
             ("Memory", "GC.Alloc", "GC.Alloc"),
+            ("Scripts", "WD.Enemy.Tick", "Enemy.Tick"),
+            ("Scripts", "WD.Projectile.Tick", "Projectile.Tick"),
         };
+
+        // Mixed enemies: 20 slots of every type and variant, refilled when one dies (an Exploder explodes).
+        static readonly (string id, string variant, int count)[] MixRoster =
+        {
+            ("ghoul", null, 4), ("brute", null, 2), ("skeleton", null, 4), ("bat", null, 4), ("exploder", null, 3),
+            ("ghoul", "armored_zombie", 1), ("skeleton", "elite_skeleton", 1), ("bat", "fast_bat", 1),
+        };
+        public bool mixedEnemies;
+        readonly List<(EnemyDefinition definition, EnemyVariant variant, string label)> mixSlots =
+            new List<(EnemyDefinition, EnemyVariant, string)>();
+        Enemy[] mixEnemies = new Enemy[0];
+        long[] mixSerial = new long[0];
+        long mixSerialCounter;
+        // Churn: every ChurnSeconds the oldest mixed enemy is killed (Enemy.Kill) and its slot respawns.
+        const float ChurnSeconds = 0.5f;
+        float churnCarry;
+        bool churnKilling;
+        int mixDeaths, mixSpawns, mixExplosions;
+        System.Action<Enemy> onMixDied;
+        // Exploders chase this stand-in instead of the player (scenario only; never dies).
+        PlayerHealth decoy;
         ProfilerRecorder[] breakdown;
 
         float spawnCarry;
@@ -101,6 +124,117 @@ namespace WhiteDragon
                 enemyDef = Instantiate(ghoul);
                 enemyDef.maxHealth = 1e9f;
             }
+            BuildMixRoster();
+        }
+
+        /// <summary>
+        /// One slot per roster entry. Each slot spawns through EnemySpawner (its prefab, debug key) with a run-time
+        /// copy of its variant whose health multiplier is huge, so rocks never kill it (like the plain stress
+        /// enemies); they die by exploding (Exploders, at the decoy) or by the churn kill, and their slot respawns.
+        /// </summary>
+        void BuildMixRoster()
+        {
+            mixSlots.Clear();
+            foreach (var (id, variantId, count) in MixRoster)
+            {
+                var definition = EnemyCatalog.Find(id);
+                if (definition == null) continue;
+                var source = variantId != null ? EnemyCatalog.FindVariant(variantId) : null;
+                var tough = source != null ? Instantiate(source) : ScriptableObject.CreateInstance<EnemyVariant>();
+                tough.healthMultiplier *= 1e8f;
+                string label = source != null ? source.id : id;
+                for (int i = 0; i < count; i++) mixSlots.Add((definition, tough, label));
+            }
+            mixEnemies = new Enemy[mixSlots.Count];
+            mixSerial = new long[mixSlots.Count];
+            onMixDied = OnMixDied;
+        }
+
+        void OnMixDied(Enemy e)
+        {
+            mixDeaths++;
+            if (!churnKilling && e.definition != null && e.definition.id == "exploder") mixExplosions++;
+        }
+
+        void MaintainMix(float dt)
+        {
+            bool on = mixedEnemies && enemyCount > 0;
+            if (on && decoy == null) decoy = CreateDecoy();
+            if (!on && decoy != null) Destroy(decoy.gameObject);
+            if (on)
+            {
+                churnCarry += dt;
+                while (churnCarry >= ChurnSeconds)
+                {
+                    churnCarry -= ChurnSeconds;
+                    KillOldestMixEnemy();
+                }
+                if (decoy.State.Soul < 10) decoy.State.AddSoul(20);
+            }
+            else
+            {
+                churnCarry = 0f;
+            }
+            for (int i = 0; i < mixEnemies.Length; i++)
+            {
+                var e = mixEnemies[i];
+                if (!on)
+                {
+                    if (e != null) Destroy(e.gameObject);
+                    mixEnemies[i] = null;
+                    continue;
+                }
+                // A self-destructed Exploder is already destroyed here (Unity null), so test the slot, not the object.
+                if (e != null && !e.IsDead) continue;
+                var slot = mixSlots[i];
+                float a = i * 137.508f * Mathf.Deg2Rad;
+                Vector3 at = player.position + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * 10f
+                             + Vector3.up * (slot.definition.movement == MovementMode.Flying ? 1.5f : 0.05f);
+                var spawned = EnemySpawner.Spawn(slot.definition, slot.variant, at, EnemySpawner.NextDebugKey());
+                spawned.Died += onMixDied;
+                spawned.SetTarget(slot.definition.id == "exploder" ? decoy : playerHealth);
+                mixEnemies[i] = spawned;
+                mixSerial[i] = ++mixSerialCounter;
+                mixSpawns++;
+            }
+        }
+
+        void KillOldestMixEnemy()
+        {
+            int oldest = -1;
+            for (int i = 0; i < mixEnemies.Length; i++)
+                if (mixEnemies[i] != null && !mixEnemies[i].IsDead && (oldest < 0 || mixSerial[i] < mixSerial[oldest])) oldest = i;
+            if (oldest < 0) return;
+            churnKilling = true;
+            mixEnemies[oldest].Kill();
+            churnKilling = false;
+        }
+
+        /// <summary>A second, harness-only target 4 m in front of the player, in the open, that Exploders chase.
+        /// Huge health plus soul top-ups so it never dies (its death would end the run).</summary>
+        PlayerHealth CreateDecoy()
+        {
+            var go = new GameObject("StressDecoy");
+            go.SetActive(false);
+            go.transform.position = player.position + player.forward * 4f;
+            var cc = go.AddComponent<CharacterController>();
+            cc.radius = 0.35f;
+            cc.height = 1.8f;
+            cc.center = new Vector3(0f, 0.9f, 0f);
+            var health = go.AddComponent<PlayerHealth>();
+            health.startingContainers = 1000;
+            go.SetActive(true);
+            return health;
+        }
+
+        /// <summary>The mix by type, e.g. "ghoul x4, brute x2, ...".</summary>
+        string MixDescription()
+        {
+            var counts = new Dictionary<string, int>();
+            foreach (var s in mixSlots) counts[s.label] = counts.TryGetValue(s.label, out int n) ? n + 1 : 1;
+            var sb = new StringBuilder();
+            foreach (var kv in counts) sb.Append(sb.Length > 0 ? ", " : "").Append(kv.Key).Append(" x").Append(kv.Value);
+            return sb.ToString();
         }
 
         void Start()
@@ -214,6 +348,20 @@ namespace WhiteDragon
         void MaintainEnemies(float dt)
         {
             enemies.RemoveAll(e => e == null);
+            MaintainMix(dt);
+            if (mixedEnemies && enemyCount > 0)
+            {
+                // Mixed slots replace the plain stress enemies; keep the player alive and the burn going on them.
+                foreach (var e in enemies) Destroy(e.gameObject);
+                enemies.Clear();
+                if (playerHealth != null && playerHealth.State.Soul < 10) playerHealth.State.AddSoul(20);
+                if (!homingAndBurn || burn == null) return;
+                burnTimer -= dt;
+                if (burnTimer > 0f) return;
+                burnTimer = 1f;
+                foreach (var e in mixEnemies) if (e != null && !e.IsDead) e.GetComponent<StatusReceiver>().Apply(burn, 1);
+                return;
+            }
             if (enemyDef == null) return;
             while (enemies.Count < enemyCount) enemies.Add(SpawnEnemy(enemies.Count));
             while (enemies.Count > enemyCount)
@@ -267,6 +415,7 @@ namespace WhiteDragon
             keepRocksAlive = 0;
             enemyCount = 0;
             homingAndBurn = false;
+            mixedEnemies = false;
         }
 
         // ---------- Suite ----------
@@ -274,7 +423,7 @@ namespace WhiteDragon
         public IEnumerator RunAll(bool quitAfter)
         {
             yield return RunSuite();
-            var check = GetComponent<FrameRateCheck>();
+            var check = Array.IndexOf(Environment.GetCommandLineArgs(), "-wdMixOnly") >= 0 ? null : GetComponent<FrameRateCheck>();
             if (check != null) yield return check.Run();
             if (!Application.isEditor)
                 File.WriteAllText(Path.Combine(Application.dataPath, "..", "wd_stress_results.txt"),
@@ -290,6 +439,17 @@ namespace WhiteDragon
         {
             SetFrameCap(-1);
             string dir = Path.Combine(Application.dataPath, "..");
+            // "-wdMixOnly": one capture of the mixed realistic heavy scenario with OnGUI off, allocation call stacks on.
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-wdMixOnly") >= 0)
+            {
+                foreach (var mb in FindObjectsByType<MonoBehaviour>())
+                    if (mb is Crosshair || mb is HeartsHUD || mb is DeathScreen || mb is DebugPanel) mb.enabled = false;
+                UnityEngine.Profiling.Profiler.enableAllocationCallstacks = true;
+                mixedEnemies = true;
+                yield return ProfileScenario(Path.Combine(dir, "profile_mix"), 150, 20, true, true, 5f);
+                if (quitAfter && !Application.isEditor) Application.Quit();
+                yield break;
+            }
             yield return ProfileScenario(Path.Combine(dir, "profile_100rocks"), 100, 0, false, false, 3f);
             yield return ProfileScenario(Path.Combine(dir, "profile_heavy"), 600, 20, true, true, 10f);
             if (quitAfter && !Application.isEditor) Application.Quit();
@@ -334,15 +494,20 @@ namespace WhiteDragon
             // rocks = live rocks to keep alive; rate > 0 instead fires that many per second (rocks then = 0).
             // steep: aim almost straight up so 600 homing rocks stay alive and keep searching (the steady heaviest case).
             // noGui: OnGUI components off, to show how much garbage IMGUI itself makes.
-            var scenarios = new (int rocks, float rate, int enemies, bool effects, bool steep, bool noGui)[]
+            // mixed: the 20 enemies are the MixRoster (every type and variant, oldest killed every 0.5 s, dead slots respawned) instead of ghouls.
+            var scenarios = new List<(int rocks, float rate, int enemies, bool effects, bool steep, bool noGui, bool mixed)>
             {
-                (100, 0f, 0, false, false, false), (300, 0f, 0, false, false, false), (600, 0f, 0, false, false, false),
-                (300, 0f, 20, false, false, false), (300, 0f, 20, true, false, false), (600, 0f, 20, true, false, false),
-                (0, 200f, 20, true, false, false),
-                (150, 0f, 20, true, true, false), // realistic heavy tier
-                (600, 0f, 20, true, true, false), // extreme ceiling tier
-                (600, 0f, 20, true, true, true),
+                (100, 0f, 0, false, false, false, false), (300, 0f, 0, false, false, false, false), (600, 0f, 0, false, false, false, false),
+                (300, 0f, 20, false, false, false, false), (300, 0f, 20, true, false, false, false), (600, 0f, 20, true, false, false, false),
+                (0, 200f, 20, true, false, false, false),
+                (150, 0f, 20, true, true, false, false), // realistic heavy tier
+                (600, 0f, 20, true, true, false, false), // extreme ceiling tier
+                (600, 0f, 20, true, true, true, false),
+                (150, 0f, 20, true, true, true, true),  // realistic heavy tier, mixed enemies, OnGUI off (allocations without IMGUI)
+                (150, 0f, 20, true, true, false, true), // the same with the HUD on
             };
+            // "-wdMixOnly": just the mixed-enemy scenarios.
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-wdMixOnly") >= 0) scenarios.RemoveAll(s => !s.mixed);
             var samples = new float[20000];
             var gui = new List<Behaviour>();
             foreach (var mb in FindObjectsByType<MonoBehaviour>())
@@ -355,8 +520,12 @@ namespace WhiteDragon
                 homingAndBurn = s.effects;
                 aimPitch = s.steep ? 80f : 45f;
                 spreadDegrees = s.steep ? 15f : 60f;
+                mixedEnemies = s.mixed;
                 foreach (var g in gui) g.enabled = !s.noGui;
+                // Collect between scenarios so one scenario's garbage is not collected inside the next one's window.
+                GC.Collect();
                 yield return new WaitForSecondsRealtime(rockLifetime + 1.5f);
+                int deathsAtStart = mixDeaths, spawnsAtStart = mixSpawns, explosionsAtStart = mixExplosions;
 
                 int frames = 0;
                 double sumMs = 0, sumScript = 0, sumGc = 0, sumMain = 0, sumBatches = 0, sumRocks = 0, sumEnemies = 0;
@@ -402,12 +571,17 @@ namespace WhiteDragon
                         ? $" {BreakdownMarkers[m].label} {markerMs[m] / frames:0.00} ms x{markerCalls[m] / frames:0}"
                         : $" {BreakdownMarkers[m].label} n/a");
                 float avg = (float)(sumMs / frames);
-                int over33 = 0;
-                for (int i = 0; i < Mathf.Min(frames, samples.Length); i++) if (samples[i] > 33.3f) over33++;
+                int over33 = 0, over16 = 0;
+                for (int i = 0; i < Mathf.Min(frames, samples.Length); i++)
+                {
+                    if (samples[i] > 33.3f) over33++;
+                    if (samples[i] > 16.7f) over16++;
+                }
                 string line =
-                    $"[Stress] {(s.rate > 0f ? $"fire {s.rate:0}/s" : $"keep {s.rocks,3} alive")} enemies={s.enemies,2} homing+burn={(s.effects ? "yes" : "no ")}{(s.steep ? " aimed up" : "")}{(s.noGui ? " OnGUI off" : "")} | " +
-                    $"live rocks {sumRocks / frames:0} enemies {sumEnemies / frames:0} | avg {avg:0.00} ms ({1000f / avg:0} fps) " +
-                    $"worst {worst:0.00} ms, >33ms: {over33} | main thread {sumMain / frames:0.00} ms | scripts {sumScript / frames:0.00} ms | " +
+                    $"[Stress] {(s.rate > 0f ? $"fire {s.rate:0}/s" : $"keep {s.rocks,3} alive")} enemies={s.enemies,2} homing+burn={(s.effects ? "yes" : "no ")}{(s.steep ? " aimed up" : "")}{(s.noGui ? " OnGUI off" : "")}" +
+                    $"{(s.mixed ? $" MIXED [{MixDescription()}], in window: deaths {mixDeaths - deathsAtStart}, spawns {mixSpawns - spawnsAtStart}, explosions {mixExplosions - explosionsAtStart}" : "")} | " +
+                    $"live rocks {sumRocks / frames:0} enemies {sumEnemies / frames:0.0} | avg {avg:0.00} ms ({1000f / avg:0} fps) " +
+                    $"worst {worst:0.00} ms, >16.7ms: {over16}, >33ms: {over33} | main thread {sumMain / frames:0.00} ms | scripts {sumScript / frames:0.00} ms | " +
                     $"gpu {(gpuFrames > 0 ? $"{sumGpu / gpuFrames:0.00} ms" : "n/a")} | GC {sumGc / frames:0} B/frame | frames {frames}\n" +
                     $"[Stress]     per frame:{parts} | burst particles alive {sumBursts / frames:0}, damage numbers alive {sumNumbers / frames:0}, recycled by cap {Projectile.RecycledByCap}";
                 Debug.Log(line);
