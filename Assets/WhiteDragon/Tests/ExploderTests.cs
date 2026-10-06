@@ -113,5 +113,63 @@ namespace WhiteDragon
             Assert.AreEqual(red, player.State.Red, "20 m away: outside the 3 m blast");
             Assert.AreEqual(ghoulHealth, bystander.Health, "enemy blasts never hurt enemies");
         }
+
+        [Test]
+        public void Blast_DoesNotGoThroughWalls()
+        {
+            Floor();
+            var player = Player(Arena + new Vector3(0f, 0f, 2.2f), 0f);
+            var e = Exploder(Arena, "boom#5", player);
+            var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cleanup.Add(wall);
+            wall.transform.position = Arena + new Vector3(0f, 1.5f, 1.1f);
+            wall.transform.localScale = new Vector3(6f, 3f, 0.2f);
+            Physics.SyncTransforms();
+            int red = player.State.Red;
+
+            var boom = e.Brain as StateMachineBrain;
+            var explode = (ExplodeBehavior)boom.states[boom.IndexOf("Explode")].behaviors[0];
+            var state = explode.CreateState();
+            explode.Enter(e.Context, state);
+            explode.Tick(e.Context, state, 1f / 60f);
+
+            Assert.IsTrue(e.IsDead);
+            Assert.AreEqual(red, player.State.Red, "2.2 m away, inside the radius, but behind a wall");
+        }
+
+        [Test]
+        public void SelfDestruct_UsesTheNormalDeathPath_AndTheRoomClears()
+        {
+            Floor();
+            var player = Player(Arena + new Vector3(0f, 0f, 1.5f), 1f);
+            var roomGo = new GameObject("BoomRoom");
+            cleanup.Add(roomGo);
+            roomGo.AddComponent<BoxCollider>();
+            var room = roomGo.AddComponent<RoomController>();
+            room.roomId = "boom_room";
+            var e = Exploder(Arena, "unused", player);
+            room.enemies.Add(e);
+            room.Initialize();
+            room.Enter();
+            Assert.AreEqual(RoomProgress.Phase.Fighting, room.Phase);
+
+            var burn = ScriptableObject.CreateInstance<StatusEffectDefinition>();
+            cleanup.Add(burn);
+            burn.duration = 60f;
+            e.GetComponent<StatusReceiver>().Apply(burn, 1);
+            int died = 0;
+            e.Died += _ => died++;
+            Physics.SyncTransforms();
+
+            for (int i = 0; i < 300 && !e.IsDead; i++) e.Tick(1f / 60f);
+            room.CheckCleared();
+
+            Assert.IsTrue(e.IsDead);
+            Assert.AreEqual(1, died, "the same Died event as a kill, once");
+            Assert.AreEqual(0, e.GetComponent<StatusReceiver>().Active.Count, "statuses cleared");
+            Assert.IsFalse(e.enabled, "no more updates");
+            Assert.AreEqual(0, room.AliveCount());
+            Assert.AreEqual(RoomProgress.Phase.Cleared, room.Phase, "the room clears");
+        }
     }
 }

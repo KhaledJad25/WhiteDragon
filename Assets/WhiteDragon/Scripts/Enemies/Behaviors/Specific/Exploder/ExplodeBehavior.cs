@@ -3,8 +3,8 @@ using UnityEngine;
 namespace WhiteDragon
 {
     /// <summary>
-    /// The Exploder's blast: once, on the first frame of its state, it hurts the player if within the radius
-    /// (half hearts, through the normal team-checked damage path, so the player's invincibility applies),
+    /// The Exploder's blast: once, on the first frame of its state, it hurts the player if within the radius and
+    /// not behind a wall (half hearts, through the normal team-checked damage path, so invincibility applies),
     /// plays a pooled particle burst and a shake, then the enemy dies. Needs a Telegraph state before it.
     /// </summary>
     [EnemyBehaviorInfo("Blow up once: area damage to the player within the radius (half hearts), burst and shake, then the enemy dies.", "Exploder")]
@@ -39,7 +39,8 @@ namespace WhiteDragon
             if (s.Exploded) return true;
             s.Exploded = true;
             Vector3 center = ctx.Center;
-            if (ctx.HasTarget && (ctx.TargetCenter - center).sqrMagnitude <= radius * radius)
+            // Walls shelter the player (other enemies do not): the blast needs a clear line to the player's body.
+            if (ctx.HasTarget && (ctx.TargetCenter - center).sqrMagnitude <= radius * radius && ctx.HasLineOfSight())
                 ctx.Damage(ctx.Target, damage * ctx.Stats.DamageMultiplier, center);
             GameFeel.Burst(center, burstColor, burstCount, burstSpeed);
             GameFeel.Shake(shake);
