@@ -64,6 +64,9 @@ namespace WhiteDragon
         [Tooltip("After a hit-stop ends, no new one can start for this long (seconds), so constant hits never lock the game in slow motion.")]
         [Min(0f)]
         public float hitStopCooldown = 0.1f;
+        [Tooltip("Most pickups on the floor at once (at High; Medium and Low scale it like the other caps). When reached, the oldest pickup is recycled.")]
+        [Min(1)]
+        public int maxPickups = PickupManager.DefaultMaxPickups;
 
         static GameFeelSettings current;
         static bool loaded;

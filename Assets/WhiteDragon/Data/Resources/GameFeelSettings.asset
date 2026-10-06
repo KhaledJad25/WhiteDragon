@@ -24,3 +24,11 @@ MonoBehaviour:
   shakeScale: 1
   hitStopScale: 1
   soundVolume: 0.6
+  quality: 2
+  maxDamageNumbers: 60
+  maxParticles: 2000
+  maxProjectiles: 1000
+  soundCooldown: 0.03
+  hitStopMaxDuration: 0.15
+  hitStopCooldown: 0.1
+  maxPickups: 120

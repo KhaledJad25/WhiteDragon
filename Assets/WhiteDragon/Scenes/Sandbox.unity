@@ -3884,6 +3884,8 @@ GameObject:
   - component: {fileID: 1203007919}
   - component: {fileID: 1203007923}
   - component: {fileID: 1203007922}
+  - component: {fileID: 1203007925}
+  - component: {fileID: 1203007924}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -4100,6 +4102,34 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WhiteDragon.Runtime::WhiteDragon.CharacterApplier
   character: {fileID: 11400000, guid: 58e7d10da7861ef4ebcd5e3492a83c9c, type: 2}
+--- !u!114 &1203007924
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1203007910}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1cc242727058f544b5049d9dc50036f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: WhiteDragon.Runtime::WhiteDragon.WalletHUD
+  wallet: {fileID: 1203007925}
+  gap: 6
+  textColor: {r: 0.85, g: 0.8, b: 0.72, a: 1}
+--- !u!114 &1203007925
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1203007910}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01b4123ca1f7bed4785c440f643d39ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: WhiteDragon.Runtime::WhiteDragon.PlayerWallet
+  currencies: []
 --- !u!1 &1207798629
 GameObject:
   m_ObjectHideFlags: 0
