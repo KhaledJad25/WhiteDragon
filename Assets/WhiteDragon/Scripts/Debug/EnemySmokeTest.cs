@@ -21,6 +21,8 @@ namespace WhiteDragon
     {
         public const float Seconds = 10f;
         public const float Step = 1f / 60f;
+        /// <summary>The first second of each run includes one-time setup (brain state, pooled shots) and is not measured.</summary>
+        public const int WarmUpFrames = 60;
         static readonly Vector3 Arena = new Vector3(20000f, 0f, 20000f);
 
         public class Run
@@ -110,6 +112,17 @@ namespace WhiteDragon
             return report;
         }
 
+        /// <summary>Frames measured: the frames it lived inside the window, after the warm-up (0 if it died during the warm-up).</summary>
+        public static int LivingFramesMeasured(int framesLived, int windowFrames) =>
+            Math.Max(0, Math.Min(framesLived, windowFrames) - WarmUpFrames);
+
+        /// <summary>Allocation per frame it was alive (after the warm-up), not per frame of the whole window. -1 = unknown.</summary>
+        public static double BytesPerLivingFrame(long allocatedBytes, int framesLived, int windowFrames)
+        {
+            int measured = LivingFramesMeasured(framesLived, windowFrames);
+            return measured > 0 ? (double)allocatedBytes / measured : -1;
+        }
+
         static Run RunOne(EnemyDefinition def, EnemyVariant variant, int index)
         {
             var run = new Run { Name = def.name + (variant != null ? " + " + variant.name : "") };
@@ -142,14 +155,13 @@ namespace WhiteDragon
                 Vector3 start = enemy.transform.position;
                 string state = "";
                 int frames = Mathf.RoundToInt(Seconds / Step);
-                const int WarmUp = 60; // the first second includes one-time setup (brain state, pooled shots)
                 long heapAtStart = 0;
                 int collectionsAtStart = 0;
                 int ticked = 0;
                 for (int i = 0; i < frames && !enemy.IsDead; i++)
                 {
                     ticked++;
-                    if (i == WarmUp)
+                    if (i == WarmUpFrames)
                     {
                         heapAtStart = Profiler.GetMonoUsedSizeLong();
                         collectionsAtStart = GC.CollectionCount(0);
@@ -168,7 +180,7 @@ namespace WhiteDragon
                 // Managed heap growth over the frames it was alive after the warm-up, divided by those frames. The
                 // heap grows in blocks (about 4 KB), so over 540 frames this resolves to about 8 bytes per frame;
                 // a garbage collection in between, or dying during the warm-up, makes it unusable (reported).
-                run.MeasuredFrames = Math.Max(0, ticked - WarmUp);
+                run.MeasuredFrames = LivingFramesMeasured(ticked, frames);
                 if (run.MeasuredFrames == 0 || GC.CollectionCount(0) != collectionsAtStart)
                 {
                     run.HeapGrowthBytes = -1;
@@ -177,7 +189,7 @@ namespace WhiteDragon
                 else
                 {
                     run.HeapGrowthBytes = Math.Max(0L, Profiler.GetMonoUsedSizeLong() - heapAtStart);
-                    run.BytesPerFrame = (double)run.HeapGrowthBytes / run.MeasuredFrames;
+                    run.BytesPerFrame = BytesPerLivingFrame(run.HeapGrowthBytes, ticked, frames);
                 }
                 // Stuck: no movement and no state change for the whole run, unless its brain is idle on purpose
                 // (its start state is marked Terminal).
